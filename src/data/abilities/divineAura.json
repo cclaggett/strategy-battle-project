@@ -1,0 +1,7 @@
+{
+  "id": "divineAura",
+  "name": "Divine Aura",
+  "trigger": "turnEnd",
+  "description": "At end of turn, heal 10 HP",
+  "effects": [{ "type": "heal", "target": "self", "amount": 10 }]
+}

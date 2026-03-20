@@ -7,5 +7,17 @@
   "mAtk": 50,
   "mDef": 40,
   "spd": 40,
-  "pool": ["fireball", "thunder", "darkPulse", "heal", "arcaneBlast", "hex", "intimidate"]
+  "pool": [
+    "fireball",
+    "thunder",
+    "darkPulse",
+    "heal",
+    "arcaneBlast",
+    "hex",
+    "intimidate"
+  ],
+  "abilityPool": [
+    "soulDrain",
+    "curseAura"
+  ]
 }

@@ -1,0 +1,7 @@
+{
+  "id": "poisonBlade",
+  "name": "Poison Blade",
+  "trigger": "onDealDamage",
+  "description": "After dealing damage, lower enemy DEF by 1 stage",
+  "effects": [{ "type": "statFx", "target": "enemy", "stat": "def", "stages": -1 }]
+}

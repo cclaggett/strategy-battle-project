@@ -1,0 +1,7 @@
+{
+  "id": "swiftFeet",
+  "name": "Swift Feet",
+  "trigger": "turnEnd",
+  "description": "At end of turn, gain +1 SPD stage",
+  "effects": [{ "type": "statFx", "target": "self", "stat": "spd", "stages": 1 }]
+}

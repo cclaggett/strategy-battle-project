@@ -1,0 +1,7 @@
+{
+  "id": "curseAura",
+  "name": "Curse Aura",
+  "trigger": "onEntry",
+  "description": "On entry, lower enemy MAG by 1 stage",
+  "effects": [{ "type": "statFx", "target": "enemy", "stat": "mAtk", "stages": -1 }]
+}

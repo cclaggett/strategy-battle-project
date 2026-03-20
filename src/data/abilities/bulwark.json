@@ -1,0 +1,7 @@
+{
+  "id": "bulwark",
+  "name": "Bulwark",
+  "trigger": "onHit",
+  "description": "When hit, gain +1 DEF stage",
+  "effects": [{ "type": "statFx", "target": "self", "stat": "def", "stages": 1 }]
+}

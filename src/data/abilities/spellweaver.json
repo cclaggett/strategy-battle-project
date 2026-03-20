@@ -1,0 +1,7 @@
+{
+  "id": "spellweaver",
+  "name": "Spellweaver",
+  "trigger": "onDealDamage",
+  "description": "After dealing damage, gain +1 MAG stage",
+  "effects": [{ "type": "statFx", "target": "self", "stat": "mAtk", "stages": 1 }]
+}

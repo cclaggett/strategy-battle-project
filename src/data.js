@@ -8,6 +8,7 @@
 let ATTACKS = {};
 let ROSTER = {};
 let PLAYER_ACTIONS = {};
+let ABILITIES = {};
 let STAT_POINTS = 50;
 let STAT_MAX_PER = 20;
 let MAX_PLAYER_HP = 6;
@@ -47,17 +48,19 @@ async function loadGameData() {
   STAT_LABELS = cfg.statLabels;
 
   // Load all entities in parallel
-  const [attacks, characters, playerActions] = await Promise.all([
+  const [attacks, characters, playerActions, abilities] = await Promise.all([
     loadFolder('attacks'),
     loadFolder('characters'),
     loadFolder('player-actions'),
+    loadFolder('abilities'),
   ]);
 
   ATTACKS = attacks;
   ROSTER = characters;
   PLAYER_ACTIONS = playerActions;
+  ABILITIES = abilities;
 
-  console.log(`Loaded ${Object.keys(ATTACKS).length} attacks, ${Object.keys(ROSTER).length} characters, ${Object.keys(PLAYER_ACTIONS).length} player actions`);
+  console.log(`Loaded ${Object.keys(ATTACKS).length} attacks, ${Object.keys(ROSTER).length} characters, ${Object.keys(PLAYER_ACTIONS).length} player actions, ${Object.keys(ABILITIES).length} abilities`);
 }
 
 // ── Formulas (kept in JS — they need logic) ─────────────────────────

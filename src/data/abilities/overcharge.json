@@ -1,0 +1,7 @@
+{
+  "id": "overcharge",
+  "name": "Overcharge",
+  "trigger": "onDealDamage",
+  "description": "After dealing damage, gain +1 SPD stage",
+  "effects": [{ "type": "statFx", "target": "self", "stat": "spd", "stages": 1 }]
+}

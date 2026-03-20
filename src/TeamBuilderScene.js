@@ -13,6 +13,7 @@ class TeamBuilderScene extends Phaser.Scene {
     this.p2PlayerActions = [];
     this.currentCharKey = null;
     this.selectedAttacks = [];
+    this.selectedAbility = null;
     this.selectedPlayerActions = [];
     this.statAlloc = {};
     this.usedKeys = new Set();
@@ -151,6 +152,7 @@ class TeamBuilderScene extends Phaser.Scene {
     const picks = team.characters.map(c => ({
       key: c.key,
       attacks: [...c.attacks],
+      ability: c.ability || null,
       bonuses: { ...c.bonuses },
     }));
 
@@ -193,11 +195,12 @@ class TeamBuilderScene extends Phaser.Scene {
     const summaryLines = picks.map(p => {
       const char = ROSTER[p.key];
       const atkNames = p.attacks.map(a => ATTACKS[a].name).join(', ');
+      const abilityName = p.ability && ABILITIES[p.ability] ? ` | ${ABILITIES[p.ability].name}` : '';
       const bonusStr = ALLOCATABLE_STATS
         .filter(s => p.bonuses[s] > 0)
         .map(s => `${STAT_LABELS[s]}+${p.bonuses[s]}`)
         .join(' ');
-      return `${char.name}: ${atkNames}${bonusStr ? '  [' + bonusStr + ']' : ''}`;
+      return `${char.name}: ${atkNames}${abilityName}${bonusStr ? '  [' + bonusStr + ']' : ''}`;
     });
 
     const playerActions = this.currentPlayer === 1 ? this.p1PlayerActions : this.p2PlayerActions;
@@ -225,6 +228,7 @@ class TeamBuilderScene extends Phaser.Scene {
           characters: picks.map(p => ({
             key: p.key,
             attacks: [...p.attacks],
+            ability: p.ability || null,
             bonuses: { ...p.bonuses },
           })),
           playerActions: [...playerActions],
@@ -438,9 +442,8 @@ class TeamBuilderScene extends Phaser.Scene {
       confirmBg.on('pointerover', () => confirmBg.setFillStyle(0x22c55e));
       confirmBg.on('pointerout', () => confirmBg.setFillStyle(0x166534));
       confirmBg.on('pointerdown', () => {
-        this.statAlloc = {};
-        ALLOCATABLE_STATS.forEach(s => this.statAlloc[s] = 0);
-        this.showStatAlloc();
+        this.selectedAbility = null;
+        this.showAbilitySelect();
       });
       this.buttons.push(confirmBg, confirmTxt);
     }
@@ -448,6 +451,88 @@ class TeamBuilderScene extends Phaser.Scene {
     const backBg = this.add.rectangle(80, H - 70, 120, 36, 0x333333).setStrokeStyle(1, 0x555555).setInteractive({ useHandCursor: true });
     const backTxt = this.add.text(80, H - 70, '← Back', { fontSize: '13px', fill: '#aaa', fontFamily: 'monospace' }).setOrigin(0.5);
     backBg.on('pointerdown', () => this.showCharacterSelect());
+    this.buttons.push(backBg, backTxt);
+
+    this.infoText.setText('');
+  }
+
+  // ── Ability Selection ──────────────────────────────────────────
+  showAbilitySelect() {
+    this.clearButtons();
+    this.step = 'pickAbility';
+    const W = this.scale.width;
+    const H = this.scale.height;
+    const char = ROSTER[this.currentCharKey];
+    const accent = this.currentPlayer === 1 ? '#53a8b6' : '#e94560';
+    const pool = char.abilityPool || [];
+
+    this.titleText.setText(`Player ${this.currentPlayer} — Ability for ${char.name}`);
+    this.subtitleText.setText('Choose 1 passive ability');
+
+    if (pool.length === 0) {
+      // No abilities available, skip to stats
+      this.statAlloc = {};
+      ALLOCATABLE_STATS.forEach(s => this.statAlloc[s] = 0);
+      this.showStatAlloc();
+      return;
+    }
+
+    const startY = 120;
+
+    pool.forEach((abilityKey, i) => {
+      const ability = ABILITIES[abilityKey];
+      if (!ability) return;
+      const by = startY + i * 80;
+      const isSelected = this.selectedAbility === abilityKey;
+
+      const bg = this.add.rectangle(W / 2, by, 550, 65, isSelected ? 0x1a4a1a : 0x16213e)
+        .setStrokeStyle(2, isSelected ? 0x4ade80 : 0x333333)
+        .setInteractive({ useHandCursor: true });
+
+      const nameT = this.add.text(W / 2, by - 16, ability.name, {
+        fontSize: '16px', fill: isSelected ? '#4ade80' : accent, fontFamily: 'monospace'
+      }).setOrigin(0.5);
+
+      const triggerLabel = {
+        onEntry: '⚡ On Entry', onExit: '🚪 On Exit', onHit: '💥 When Hit',
+        onKO: '💀 On KO', onDealDamage: '⚔ On Deal Damage',
+        turnStart: '🔄 Turn Start', turnEnd: '🔄 Turn End'
+      }[ability.trigger] || ability.trigger;
+
+      const triggerT = this.add.text(W / 2, by + 4, triggerLabel, {
+        fontSize: '11px', fill: '#f0a500', fontFamily: 'monospace'
+      }).setOrigin(0.5);
+
+      const descT = this.add.text(W / 2, by + 22, ability.description, {
+        fontSize: '11px', fill: '#aaa', fontFamily: 'monospace'
+      }).setOrigin(0.5);
+
+      bg.on('pointerover', () => { if (!isSelected) bg.setStrokeStyle(2, parseInt(accent.replace('#', ''), 16)); });
+      bg.on('pointerout', () => { if (!isSelected) bg.setStrokeStyle(2, 0x333333); });
+      bg.on('pointerdown', () => {
+        this.selectedAbility = abilityKey;
+        this.showAbilitySelect();
+      });
+
+      this.buttons.push(bg, nameT, triggerT, descT);
+    });
+
+    if (this.selectedAbility) {
+      const confirmBg = this.add.rectangle(W / 2, H - 60, 200, 40, 0x166534).setStrokeStyle(2, 0x4ade80).setInteractive({ useHandCursor: true });
+      const confirmTxt = this.add.text(W / 2, H - 60, '✓ Pick Stats →', { fontSize: '16px', fill: '#4ade80', fontFamily: 'monospace' }).setOrigin(0.5);
+      confirmBg.on('pointerover', () => confirmBg.setFillStyle(0x22c55e));
+      confirmBg.on('pointerout', () => confirmBg.setFillStyle(0x166534));
+      confirmBg.on('pointerdown', () => {
+        this.statAlloc = {};
+        ALLOCATABLE_STATS.forEach(s => this.statAlloc[s] = 0);
+        this.showStatAlloc();
+      });
+      this.buttons.push(confirmBg, confirmTxt);
+    }
+
+    const backBg = this.add.rectangle(80, H - 60, 120, 36, 0x333333).setStrokeStyle(1, 0x555555).setInteractive({ useHandCursor: true });
+    const backTxt = this.add.text(80, H - 60, '← Back', { fontSize: '13px', fill: '#aaa', fontFamily: 'monospace' }).setOrigin(0.5);
+    backBg.on('pointerdown', () => this.showAttackSelect());
     this.buttons.push(backBg, backTxt);
 
     this.infoText.setText('');
@@ -529,6 +614,7 @@ class TeamBuilderScene extends Phaser.Scene {
     this.currentPicks.push({
       key: this.currentCharKey,
       attacks: [...this.selectedAttacks],
+      ability: this.selectedAbility,
       bonuses: { ...this.statAlloc },
     });
     this.usedKeys.add(this.currentCharKey);

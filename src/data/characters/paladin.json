@@ -7,5 +7,18 @@
   "mAtk": 25,
   "mDef": 40,
   "spd": 20,
-  "pool": ["heavyStrike", "shieldBash", "holySmite", "heal", "cleave", "warCry", "ironWall", "protect"]
+  "pool": [
+    "heavyStrike",
+    "shieldBash",
+    "holySmite",
+    "heal",
+    "cleave",
+    "warCry",
+    "ironWall",
+    "protect"
+  ],
+  "abilityPool": [
+    "holyShield",
+    "avenger"
+  ]
 }

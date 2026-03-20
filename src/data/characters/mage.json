@@ -7,5 +7,17 @@
   "mAtk": 55,
   "mDef": 45,
   "spd": 35,
-  "pool": ["fireball", "iceSpear", "thunder", "arcaneBlast", "darkPulse", "meditate", "hex"]
+  "pool": [
+    "fireball",
+    "iceSpear",
+    "thunder",
+    "arcaneBlast",
+    "darkPulse",
+    "meditate",
+    "hex"
+  ],
+  "abilityPool": [
+    "arcaneShield",
+    "spellweaver"
+  ]
 }

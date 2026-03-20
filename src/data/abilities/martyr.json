@@ -1,0 +1,7 @@
+{
+  "id": "martyr",
+  "name": "Martyr",
+  "trigger": "onKO",
+  "description": "When KO'd, heal 1 player HP",
+  "effects": [{ "type": "playerHeal", "target": "self", "amount": 1 }]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "glassCanon",
+  "name": "Glass Canon",
+  "trigger": "onEntry",
+  "description": "On entry, gain +2 MAG but -1 DEF",
+  "effects": [
+    { "type": "statFx", "target": "self", "stat": "mAtk", "stages": 2 },
+    { "type": "statFx", "target": "self", "stat": "def", "stages": -1 }
+  ]
+}

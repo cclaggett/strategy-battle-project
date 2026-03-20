@@ -7,5 +7,17 @@
   "mAtk": 60,
   "mDef": 42,
   "spd": 38,
-  "pool": ["arcaneBlast", "fireball", "thunder", "iceSpear", "darkPulse", "meditate", "hex"]
+  "pool": [
+    "arcaneBlast",
+    "fireball",
+    "thunder",
+    "iceSpear",
+    "darkPulse",
+    "meditate",
+    "hex"
+  ],
+  "abilityPool": [
+    "overcharge",
+    "glassCanon"
+  ]
 }

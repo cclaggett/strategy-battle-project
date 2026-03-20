@@ -5,8 +5,8 @@ class BattleScene extends Phaser.Scene {
   }
 
   init(data) {
-    this.p1Team = data.p1Picks.map(p => this.makeChar(p.key, p.attacks, p.bonuses));
-    this.p2Team = data.p2Picks.map(p => this.makeChar(p.key, p.attacks, p.bonuses));
+    this.p1Team = data.p1Picks.map(p => this.makeChar(p.key, p.attacks, p.ability, p.bonuses));
+    this.p2Team = data.p2Picks.map(p => this.makeChar(p.key, p.attacks, p.ability, p.bonuses));
     this.p1Index = 0;
     this.p2Index = 0;
     this.p1Choice = null;
@@ -27,14 +27,54 @@ class BattleScene extends Phaser.Scene {
     this.roundNumber = 0;
   }
 
-  makeChar(key, attacks, bonuses) {
+  makeChar(key, attacks, ability, bonuses) {
     const t = ROSTER[key];
-    const char = { key, ...t, attacks, maxHp: t.hp, currentHp: t.hp, alive: true };
+    const char = { key, ...t, attacks, ability: ability || null, maxHp: t.hp, currentHp: t.hp, alive: true };
     if (bonuses) {
       ALLOCATABLE_STATS.forEach(s => { char[s] += (bonuses[s] || 0); });
     }
     char.stages = { atk: 0, def: 0, mAtk: 0, mDef: 0, spd: 0 };
     return char;
+  }
+
+  // ── Ability Hook System ─────────────────────────────────────────
+  // Fires ability effects for a character if their ability matches the trigger.
+  // context: { char, enemy, player } — the character with the ability, their opponent, and which player (1 or 2)
+  fireAbilityHooks(trigger, context) {
+    const { char, enemy, player } = context;
+    if (!char || !char.ability) return;
+    // onKO fires even when dead; all other triggers require alive
+    if (trigger !== 'onKO' && !char.alive) return;
+    const ability = ABILITIES[char.ability];
+    if (!ability || ability.trigger !== trigger) return;
+
+    this.log.push(`${char.name}'s ${ability.name} activates!`);
+
+    for (const fx of ability.effects) {
+      if (fx.type === 'statFx') {
+        const target = fx.target === 'self' ? char : enemy;
+        if (!target || !target.alive) continue;
+        target.stages[fx.stat] = (target.stages[fx.stat] || 0) + fx.stages;
+        const statLabel = STAT_LABELS[fx.stat] || fx.stat;
+        const dir = fx.stages > 0 ? 'rose' : 'fell';
+        const mult = stageMultiplier(target.stages[fx.stat]);
+        this.log.push(`${target.name}'s ${statLabel} ${dir}! (×${mult.toFixed(2)})`);
+      } else if (fx.type === 'heal') {
+        const target = fx.target === 'self' ? char : enemy;
+        if (!target || !target.alive) continue;
+        const healed = Math.min(fx.amount, target.maxHp - target.currentHp);
+        if (healed > 0) {
+          target.currentHp += healed;
+          this.log.push(`${target.name} heals ${healed} HP!`);
+        }
+      } else if (fx.type === 'playerHeal') {
+        const prop = player === 1 ? 'p1PlayerHp' : 'p2PlayerHp';
+        if (this[prop] < MAX_PLAYER_HP) {
+          this[prop] = Math.min(MAX_PLAYER_HP, this[prop] + fx.amount);
+          this.log.push(`Player ${player} recovers ${fx.amount} player HP!`);
+        }
+      }
+    }
   }
 
   get p1Active() { return this.p1Team[this.p1Index]; }
@@ -101,6 +141,10 @@ class BattleScene extends Phaser.Scene {
     // Battle log
     this.logText = this.add.text(W / 2, H * 0.96, '', { fontSize: '11px', fill: '#ccc', fontFamily: 'monospace', align: 'center', wordWrap: { width: W - 40 } }).setOrigin(0.5, 0.5);
 
+    // Fire onEntry for starting characters
+    this.fireAbilityHooks('onEntry', { char: this.p1Active, enemy: this.p2Active, player: 1 });
+    this.fireAbilityHooks('onEntry', { char: this.p2Active, enemy: this.p1Active, player: 2 });
+
     this.refreshUI();
     this.showPlayerActionMenu();
   }
@@ -140,15 +184,17 @@ class BattleScene extends Phaser.Scene {
     this.p1PlayerHpLabel.setText(`Player HP: ${this.p1PlayerHp}/${MAX_PLAYER_HP}`);
     this.p2PlayerHpLabel.setText(`Player HP: ${this.p2PlayerHp}/${MAX_PLAYER_HP}`);
 
+    const p1AbilityStr = p1.ability && ABILITIES[p1.ability] ? `\n✦ ${ABILITIES[p1.ability].name}` : '';
+    const p2AbilityStr = p2.ability && ABILITIES[p2.ability] ? `\n✦ ${ABILITIES[p2.ability].name}` : '';
     this.p1StatsText.setText(
       `${this.formatStat(p1, 'atk', 'ATK')}  ${this.formatStat(p1, 'def', 'DEF')}\n` +
       `${this.formatStat(p1, 'mAtk', 'MAG')}  ${this.formatStat(p1, 'mDef', 'RES')}\n` +
-      `${this.formatStat(p1, 'spd', 'SPD')}`
+      `${this.formatStat(p1, 'spd', 'SPD')}` + p1AbilityStr
     );
     this.p2StatsText.setText(
       `${this.formatStat(p2, 'atk', 'ATK')}  ${this.formatStat(p2, 'def', 'DEF')}\n` +
       `${this.formatStat(p2, 'mAtk', 'MAG')}  ${this.formatStat(p2, 'mDef', 'RES')}\n` +
-      `${this.formatStat(p2, 'spd', 'SPD')}`
+      `${this.formatStat(p2, 'spd', 'SPD')}` + p2AbilityStr
     );
 
     this.p1Team.forEach((c, i) => this.p1Dots[i].setFillStyle(c.alive ? 0x53a8b6 : 0x333333));
@@ -464,10 +510,15 @@ class BattleScene extends Phaser.Scene {
     switches.forEach(s => {
       this.time.delayedCall(delay, () => {
         const prop = s.player === 1 ? 'p1Index' : 'p2Index';
-        const oldName = (s.player === 1 ? this.p1Active : this.p2Active).name;
+        const oldChar = s.player === 1 ? this.p1Active : this.p2Active;
+        const enemy = s.player === 1 ? this.p2Active : this.p1Active;
+        // Fire onExit for the departing character
+        this.fireAbilityHooks('onExit', { char: oldChar, enemy, player: s.player });
         this[prop] = s.choice.index;
-        const newName = (s.player === 1 ? this.p1Active : this.p2Active).name;
-        this.log.push(`P${s.player} switches ${oldName} → ${newName}!`);
+        const newChar = s.player === 1 ? this.p1Active : this.p2Active;
+        this.log.push(`P${s.player} switches ${oldChar.name} → ${newChar.name}!`);
+        // Fire onEntry for the arriving character
+        this.fireAbilityHooks('onEntry', { char: newChar, enemy, player: s.player });
         this.refreshUI();
       });
       delay += 600;
@@ -615,9 +666,18 @@ class BattleScene extends Phaser.Scene {
     } else {
       defender.currentHp = Math.max(0, defender.currentHp - dmg);
       this.log.push(`${attacker.name} uses ${atk.name} → ${dmg} dmg to ${defender.name}!`);
+
+      // Fire onHit for defender, onDealDamage for attacker
+      if (defender.alive) {
+        this.fireAbilityHooks('onHit', { char: defender, enemy: attacker, player: defenderPlayer });
+      }
+      this.fireAbilityHooks('onDealDamage', { char: attacker, enemy: defender, player: attackerPlayer });
+
       if (defender.currentHp <= 0) {
         defender.alive = false;
         this.log.push(`${defender.name} is KO'd!`);
+        // Fire onKO for the KO'd character
+        this.fireAbilityHooks('onKO', { char: defender, enemy: attacker, player: defenderPlayer });
         this.dealPlayerDamage(defenderPlayer, 1, `Player ${defenderPlayer} loses 1 HP from the KO`);
       }
 
@@ -694,6 +754,14 @@ class BattleScene extends Phaser.Scene {
     if (!this.p1Active.alive) this.forceSwap(1);
     if (!this.p2Active.alive) this.forceSwap(2);
 
+    // Fire turnEnd ability hooks for both active characters
+    if (this.p1Active.alive) {
+      this.fireAbilityHooks('turnEnd', { char: this.p1Active, enemy: this.p2Active, player: 1 });
+    }
+    if (this.p2Active.alive) {
+      this.fireAbilityHooks('turnEnd', { char: this.p2Active, enemy: this.p1Active, player: 2 });
+    }
+
     // Tick cooldowns down
     this.p1Actions.forEach(a => { if (a.cooldownLeft > 0) a.cooldownLeft--; });
     this.p2Actions.forEach(a => { if (a.cooldownLeft > 0) a.cooldownLeft--; });
@@ -704,6 +772,16 @@ class BattleScene extends Phaser.Scene {
 
   startNextRound() {
     this.phase = 'select';
+
+    // Fire turnStart ability hooks
+    if (this.p1Active.alive) {
+      this.fireAbilityHooks('turnStart', { char: this.p1Active, enemy: this.p2Active, player: 1 });
+    }
+    if (this.p2Active.alive) {
+      this.fireAbilityHooks('turnStart', { char: this.p2Active, enemy: this.p1Active, player: 2 });
+    }
+    this.refreshUI();
+
     this.time.delayedCall(400, () => this.showPlayerActionMenu());
   }
 
@@ -711,7 +789,13 @@ class BattleScene extends Phaser.Scene {
     const team = player === 1 ? this.p1Team : this.p2Team;
     const prop = player === 1 ? 'p1Index' : 'p2Index';
     for (let i = 0; i < team.length; i++) {
-      if (team[i].alive) { this[prop] = i; return; }
+      if (team[i].alive) {
+        this[prop] = i;
+        const newChar = player === 1 ? this.p1Active : this.p2Active;
+        const enemy = player === 1 ? this.p2Active : this.p1Active;
+        this.fireAbilityHooks('onEntry', { char: newChar, enemy, player });
+        return;
+      }
     }
   }
 }

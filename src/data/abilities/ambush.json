@@ -1,0 +1,7 @@
+{
+  "id": "ambush",
+  "name": "Ambush",
+  "trigger": "onEntry",
+  "description": "On entry, gain +1 SPD stage",
+  "effects": [{ "type": "statFx", "target": "self", "stat": "spd", "stages": 1 }]
+}

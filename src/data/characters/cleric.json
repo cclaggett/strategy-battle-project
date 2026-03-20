@@ -7,5 +7,18 @@
   "mAtk": 40,
   "mDef": 50,
   "spd": 30,
-  "pool": ["heal", "prayerHeal", "holySmite", "iceSpear", "slash", "focus", "ironWall", "protect"]
+  "pool": [
+    "heal",
+    "prayerHeal",
+    "holySmite",
+    "iceSpear",
+    "slash",
+    "focus",
+    "ironWall",
+    "protect"
+  ],
+  "abilityPool": [
+    "divineAura",
+    "martyr"
+  ]
 }

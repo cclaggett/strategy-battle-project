@@ -1,0 +1,7 @@
+{
+  "id": "battleCry",
+  "name": "Battle Cry",
+  "trigger": "onEntry",
+  "description": "On entry, boost own ATK by 1 stage",
+  "effects": [{ "type": "statFx", "target": "self", "stat": "atk", "stages": 1 }]
+}

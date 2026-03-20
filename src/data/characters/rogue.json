@@ -7,5 +7,17 @@
   "mAtk": 10,
   "mDef": 20,
   "spd": 55,
-  "pool": ["quickSlash", "backstab", "slash", "hamstring", "cleave", "quicken", "expose"]
+  "pool": [
+    "quickSlash",
+    "backstab",
+    "slash",
+    "hamstring",
+    "cleave",
+    "quicken",
+    "expose"
+  ],
+  "abilityPool": [
+    "ambush",
+    "poisonBlade"
+  ]
 }

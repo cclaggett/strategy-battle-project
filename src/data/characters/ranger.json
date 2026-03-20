@@ -7,5 +7,17 @@
   "mAtk": 20,
   "mDef": 25,
   "spd": 50,
-  "pool": ["quickSlash", "slash", "hamstring", "iceSpear", "cleave", "quicken", "intimidate"]
+  "pool": [
+    "quickSlash",
+    "slash",
+    "hamstring",
+    "iceSpear",
+    "cleave",
+    "quicken",
+    "intimidate"
+  ],
+  "abilityPool": [
+    "swiftFeet",
+    "huntersMark"
+  ]
 }

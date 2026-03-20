@@ -1,0 +1,7 @@
+{
+  "id": "avenger",
+  "name": "Avenger",
+  "trigger": "onHit",
+  "description": "When hit, gain +1 ATK stage",
+  "effects": [{ "type": "statFx", "target": "self", "stat": "atk", "stages": 1 }]
+}

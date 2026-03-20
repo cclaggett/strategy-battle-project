@@ -7,5 +7,18 @@
   "mAtk": 15,
   "mDef": 30,
   "spd": 25,
-  "pool": ["slash", "heavyStrike", "shieldBash", "cleave", "hamstring", "warCry", "ironWall", "protect"]
+  "pool": [
+    "slash",
+    "heavyStrike",
+    "shieldBash",
+    "cleave",
+    "hamstring",
+    "warCry",
+    "ironWall",
+    "protect"
+  ],
+  "abilityPool": [
+    "bulwark",
+    "battleCry"
+  ]
 }

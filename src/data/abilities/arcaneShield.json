@@ -1,0 +1,7 @@
+{
+  "id": "arcaneShield",
+  "name": "Arcane Shield",
+  "trigger": "onEntry",
+  "description": "On entry, gain +1 RES stage",
+  "effects": [{ "type": "statFx", "target": "self", "stat": "mDef", "stages": 1 }]
+}

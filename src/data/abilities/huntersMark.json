@@ -1,0 +1,7 @@
+{
+  "id": "huntersMark",
+  "name": "Hunter's Mark",
+  "trigger": "onEntry",
+  "description": "On entry, lower enemy DEF by 1 stage",
+  "effects": [{ "type": "statFx", "target": "enemy", "stat": "def", "stages": -1 }]
+}

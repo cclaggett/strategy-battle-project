@@ -1,0 +1,7 @@
+{
+  "id": "holyShield",
+  "name": "Holy Shield",
+  "trigger": "onHit",
+  "description": "When hit, gain +1 RES stage",
+  "effects": [{ "type": "statFx", "target": "self", "stat": "mDef", "stages": 1 }]
+}
