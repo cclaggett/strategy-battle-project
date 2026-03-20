@@ -134,9 +134,59 @@
 - Project pushed to https://github.com/jclaggett/strategy-battle (public)
 - Can clone and run locally with any HTTP server
 
+## 2026-03-20 — Session with Caleb Claggett
+
+### Priority Bracket System
+- Every attack now has a `priority` field (integer, -5 to +5)
+- Higher priority brackets resolve first; speed breaks ties within bracket
+- Current assignments: Protect +2, Quick Slash +1, most moves 0, Heavy Strike -1
+- UI shows ⚡+N for positive priority, 🐢-N for negative on attack buttons
+
+### Passive Ability System
+- Event hook architecture: abilities declare a `trigger` and `effects`
+- Triggers: `onEntry`, `onExit`, `onHit`, `onKO`, `onDealDamage`, `turnStart`, `turnEnd`
+- Effects reuse existing patterns: `statFx`, `heal`, `playerHeal`
+- Each character has 2 abilities to choose from during draft (new step after attack pick)
+- `fireAbilityHooks(trigger, context)` called at all trigger points in battle flow
+- Active ability shown in battle UI with ✦ symbol
+- Abilities stored in `src/data/abilities/` (same modular pattern as attacks)
+
+**Ability Roster:**
+- Knight: Bulwark (DEF↑ when hit) / Battle Cry (ATK↑ on entry)
+- Mage: Arcane Shield (RES↑ on entry) / Spellweaver (MAG↑ on deal dmg)
+- Cleric: Divine Aura (heal 10 HP turn end) / Martyr (1 player HP on KO)
+- Rogue: Ambush (SPD↑ on entry) / Poison Blade (enemy DEF↓ on deal dmg)
+- Warlock: Soul Drain (heal 10 HP on deal dmg) / Curse Aura (enemy MAG↓ on entry)
+- Paladin: Holy Shield (RES↑ when hit) / Avenger (ATK↑ when hit)
+- Ranger: Swift Feet (SPD↑ turn end) / Hunter's Mark (enemy DEF↓ on entry)
+- Sorcerer: Overcharge (SPD↑ on deal dmg) / Glass Canon (+2 MAG -1 DEF on entry)
+
+### Damage Type System
+- 5 elemental types: Fire 🔥, Ice ❄️, Lightning ⚡, Holy ✨, Dark 🌑
+- Type chart in `src/data/types.json` — fully data-driven, easy to add new types
+- Characters have 1-2 types, attacks have optional `damageType`
+- Weakness = 2x damage, resistance = 0.5x (multipliers configurable in JSON)
+- Dual-type: multipliers stack (e.g. weak+weak = 4x)
+- Physical attacks without damageType are type-neutral (always 1x)
+- Battle log shows "Super effective!" / "Not very effective..."
+- Type emojis displayed on character names, attack buttons, and draft screen
+
+**Type Chart:**
+| Type | Weak to | Resists |
+|------|---------|---------|
+| Fire 🔥 | Ice | Fire, Holy |
+| Ice ❄️ | Fire, Lightning | Ice |
+| Lightning ⚡ | Dark | Lightning |
+| Holy ✨ | Dark | Holy, Fire |
+| Dark 🌑 | Holy, Lightning | Dark, Ice |
+
+**Character Types:**
+Knight ✨, Mage 🔥❄️, Cleric ✨, Rogue 🌑, Warlock 🌑🔥, Paladin ✨⚡, Ranger ❄️, Sorcerer ⚡🌑
+
 ### Ideas / Future Work
 - Visual upgrades (sprites, animations, effects)
 - More characters and attacks
+- More types (Earth, Wind, etc.)
 - Balance tuning
 - AI opponent option
 - Sound effects / music
