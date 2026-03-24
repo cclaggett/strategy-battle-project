@@ -4,7 +4,7 @@
 
   const config = {
     type: Phaser.AUTO,
-    width: 800,
+    width: 1050,
     height: 500,
     backgroundColor: '#1a1a2e',
     scene: [TeamBuilderScene, BattleScene],

@@ -86,60 +86,77 @@ class BattleScene extends Phaser.Scene {
   create() {
     const W = this.scale.width;
     const H = this.scale.height;
+    // Battle area is the left 800px, log panel is the right 250px
+    this.battleW = 800;
+    this.logPanelX = 800;
+    this.logPanelW = W - 800;
 
-    this.add.rectangle(W / 2, H / 2, W, H, 0x1a1a2e);
-    this.add.line(W / 2, H / 2, 0, -H / 2, 0, H / 2, 0x16213e).setLineWidth(2);
-    this.add.text(W / 2, 16, 'STRATEGY BATTLE', { fontSize: '20px', fill: '#e94560', fontFamily: 'monospace' }).setOrigin(0.5, 0);
+    this.add.rectangle(this.battleW / 2, H / 2, this.battleW, H, 0x1a1a2e);
+    this.add.line(this.battleW / 2, H / 2, 0, -H / 2, 0, H / 2, 0x16213e).setLineWidth(2);
+    this.add.text(this.battleW / 2, 16, 'STRATEGY BATTLE', { fontSize: '20px', fill: '#e94560', fontFamily: 'monospace' }).setOrigin(0.5, 0);
+
+    // ── Log Panel ──
+    this.add.rectangle(this.logPanelX + this.logPanelW / 2, H / 2, this.logPanelW, H, 0x111122);
+    this.add.line(this.logPanelX, H / 2, 0, -H / 2, 0, H / 2, 0x333355).setLineWidth(1);
+    this.add.text(this.logPanelX + this.logPanelW / 2, 10, '📜 Battle Log', { fontSize: '13px', fill: '#e94560', fontFamily: 'monospace' }).setOrigin(0.5, 0);
+
+    // Scrollable log text area
+    const logMask = this.add.graphics();
+    logMask.fillRect(this.logPanelX + 4, 30, this.logPanelW - 8, H - 40);
+    this.logDisplayText = this.add.text(this.logPanelX + 8, 32, '', {
+      fontSize: '10px', fill: '#ccc', fontFamily: 'monospace',
+      wordWrap: { width: this.logPanelW - 16 }, lineSpacing: 3
+    });
+    this.logDisplayText.setMask(logMask.createGeometryMask());
+
+    const BW = this.battleW;
 
     // Player labels
-    this.add.text(W * 0.25, H * 0.06, 'Player 1', { fontSize: '12px', fill: '#53a8b6', fontFamily: 'monospace' }).setOrigin(0.5);
-    this.add.text(W * 0.75, H * 0.06, 'Player 2', { fontSize: '12px', fill: '#e94560', fontFamily: 'monospace' }).setOrigin(0.5);
+    this.add.text(BW * 0.25, H * 0.06, 'Player 1', { fontSize: '12px', fill: '#53a8b6', fontFamily: 'monospace' }).setOrigin(0.5);
+    this.add.text(BW * 0.75, H * 0.06, 'Player 2', { fontSize: '12px', fill: '#e94560', fontFamily: 'monospace' }).setOrigin(0.5);
 
     // Player HP pips
     this.p1PlayerPips = [];
     this.p2PlayerPips = [];
     for (let i = 0; i < MAX_PLAYER_HP; i++) {
-      this.p1PlayerPips.push(this.add.circle(W * 0.13 + i * 18, H * 0.10, 6, 0x53a8b6).setStrokeStyle(1, 0x88ccdd));
-      this.p2PlayerPips.push(this.add.circle(W * 0.63 + i * 18, H * 0.10, 6, 0xe94560).setStrokeStyle(1, 0xff8888));
+      this.p1PlayerPips.push(this.add.circle(BW * 0.13 + i * 18, H * 0.10, 6, 0x53a8b6).setStrokeStyle(1, 0x88ccdd));
+      this.p2PlayerPips.push(this.add.circle(BW * 0.63 + i * 18, H * 0.10, 6, 0xe94560).setStrokeStyle(1, 0xff8888));
     }
-    this.p1PlayerHpLabel = this.add.text(W * 0.25, H * 0.14, '', { fontSize: '10px', fill: '#aaa', fontFamily: 'monospace' }).setOrigin(0.5);
-    this.p2PlayerHpLabel = this.add.text(W * 0.75, H * 0.14, '', { fontSize: '10px', fill: '#aaa', fontFamily: 'monospace' }).setOrigin(0.5);
+    this.p1PlayerHpLabel = this.add.text(BW * 0.25, H * 0.14, '', { fontSize: '10px', fill: '#aaa', fontFamily: 'monospace' }).setOrigin(0.5);
+    this.p2PlayerHpLabel = this.add.text(BW * 0.75, H * 0.14, '', { fontSize: '10px', fill: '#aaa', fontFamily: 'monospace' }).setOrigin(0.5);
 
     // Character sprites
-    this.p1Sprite = this.add.rectangle(W * 0.25, H * 0.30, 64, 80, 0x0f3460).setStrokeStyle(2, 0x53a8b6);
-    this.p2Sprite = this.add.rectangle(W * 0.75, H * 0.30, 64, 80, 0x5c2a2a).setStrokeStyle(2, 0xe94560);
+    this.p1Sprite = this.add.rectangle(BW * 0.25, H * 0.30, 64, 80, 0x0f3460).setStrokeStyle(2, 0x53a8b6);
+    this.p2Sprite = this.add.rectangle(BW * 0.75, H * 0.30, 64, 80, 0x5c2a2a).setStrokeStyle(2, 0xe94560);
 
     // Name labels
-    this.p1NameText = this.add.text(W * 0.25, H * 0.17, '', { fontSize: '16px', fill: '#53a8b6', fontFamily: 'monospace' }).setOrigin(0.5);
-    this.p2NameText = this.add.text(W * 0.75, H * 0.17, '', { fontSize: '16px', fill: '#e94560', fontFamily: 'monospace' }).setOrigin(0.5);
+    this.p1NameText = this.add.text(BW * 0.25, H * 0.17, '', { fontSize: '16px', fill: '#53a8b6', fontFamily: 'monospace' }).setOrigin(0.5);
+    this.p2NameText = this.add.text(BW * 0.75, H * 0.17, '', { fontSize: '16px', fill: '#e94560', fontFamily: 'monospace' }).setOrigin(0.5);
 
     // Character HP bars
-    this.p1HpBg  = this.add.rectangle(W * 0.25, H * 0.43, 120, 14, 0x333333).setStrokeStyle(1, 0x53a8b6);
-    this.p1HpBar = this.add.rectangle(W * 0.25, H * 0.43, 116, 10, 0x53a8b6);
-    this.p1HpText = this.add.text(W * 0.25, H * 0.47, '', { fontSize: '12px', fill: '#aaa', fontFamily: 'monospace' }).setOrigin(0.5, 0);
+    this.p1HpBg  = this.add.rectangle(BW * 0.25, H * 0.43, 120, 14, 0x333333).setStrokeStyle(1, 0x53a8b6);
+    this.p1HpBar = this.add.rectangle(BW * 0.25, H * 0.43, 116, 10, 0x53a8b6);
+    this.p1HpText = this.add.text(BW * 0.25, H * 0.47, '', { fontSize: '12px', fill: '#aaa', fontFamily: 'monospace' }).setOrigin(0.5, 0);
 
-    this.p2HpBg  = this.add.rectangle(W * 0.75, H * 0.43, 120, 14, 0x333333).setStrokeStyle(1, 0xe94560);
-    this.p2HpBar = this.add.rectangle(W * 0.75, H * 0.43, 116, 10, 0xe94560);
-    this.p2HpText = this.add.text(W * 0.75, H * 0.47, '', { fontSize: '12px', fill: '#aaa', fontFamily: 'monospace' }).setOrigin(0.5, 0);
+    this.p2HpBg  = this.add.rectangle(BW * 0.75, H * 0.43, 120, 14, 0x333333).setStrokeStyle(1, 0xe94560);
+    this.p2HpBar = this.add.rectangle(BW * 0.75, H * 0.43, 116, 10, 0xe94560);
+    this.p2HpText = this.add.text(BW * 0.75, H * 0.47, '', { fontSize: '12px', fill: '#aaa', fontFamily: 'monospace' }).setOrigin(0.5, 0);
 
     // Stats
-    this.p1StatsText = this.add.text(W * 0.05, H * 0.52, '', { fontSize: '11px', fill: '#888', fontFamily: 'monospace', lineSpacing: 4 });
-    this.p2StatsText = this.add.text(W * 0.55, H * 0.52, '', { fontSize: '11px', fill: '#888', fontFamily: 'monospace', lineSpacing: 4 });
+    this.p1StatsText = this.add.text(BW * 0.05, H * 0.52, '', { fontSize: '11px', fill: '#888', fontFamily: 'monospace', lineSpacing: 4 });
+    this.p2StatsText = this.add.text(BW * 0.55, H * 0.52, '', { fontSize: '11px', fill: '#888', fontFamily: 'monospace', lineSpacing: 4 });
 
     // Team dots
     this.p1Dots = [];
     this.p2Dots = [];
     for (let i = 0; i < 3; i++) {
-      this.p1Dots.push(this.add.circle(W * 0.18 + i * 20, H * 0.22, 5, 0x53a8b6));
-      this.p2Dots.push(this.add.circle(W * 0.68 + i * 20, H * 0.22, 5, 0xe94560));
+      this.p1Dots.push(this.add.circle(BW * 0.18 + i * 20, H * 0.22, 5, 0x53a8b6));
+      this.p2Dots.push(this.add.circle(BW * 0.68 + i * 20, H * 0.22, 5, 0xe94560));
     }
 
     // Action buttons area
     this.buttons = [];
-    this.promptText = this.add.text(W / 2, H * 0.63, '', { fontSize: '14px', fill: '#fff', fontFamily: 'monospace' }).setOrigin(0.5);
-
-    // Battle log
-    this.logText = this.add.text(W / 2, H * 0.96, '', { fontSize: '11px', fill: '#ccc', fontFamily: 'monospace', align: 'center', wordWrap: { width: W - 40 } }).setOrigin(0.5, 0.5);
+    this.promptText = this.add.text(BW / 2, H * 0.63, '', { fontSize: '14px', fill: '#fff', fontFamily: 'monospace' }).setOrigin(0.5);
 
     // Fire onEntry for starting characters
     this.fireAbilityHooks('onEntry', { char: this.p1Active, enemy: this.p2Active, player: 1 });
@@ -202,13 +219,23 @@ class BattleScene extends Phaser.Scene {
     this.p1Team.forEach((c, i) => this.p1Dots[i].setFillStyle(c.alive ? 0x53a8b6 : 0x333333));
     this.p2Team.forEach((c, i) => this.p2Dots[i].setFillStyle(c.alive ? 0xe94560 : 0x333333));
 
-    this.logText.setText(this.log.slice(-2).join('\n'));
+    // Update log panel — show all entries, auto-scroll to bottom
+    const logStr = this.log.map((entry, i) => entry).join('\n');
+    this.logDisplayText.setText(logStr);
+    // Scroll to bottom: move text up so latest entries are visible
+    const visibleH = this.scale.height - 40;
+    const textH = this.logDisplayText.height;
+    if (textH > visibleH) {
+      this.logDisplayText.setY(32 - (textH - visibleH));
+    } else {
+      this.logDisplayText.setY(32);
+    }
   }
 
   // ── Player Action Menu ─────────────────────────────────────────
   showPlayerActionMenu() {
     this.clearButtons();
-    const W = this.scale.width;
+    const W = this.battleW;
     const H = this.scale.height;
     const active = this.selectingPlayer === 1 ? this.p1Active : this.p2Active;
     const actions = this.getActions(this.selectingPlayer);
@@ -277,7 +304,7 @@ class BattleScene extends Phaser.Scene {
   // ── Player Action Target Menu (for long-range player attacks) ──
   showPlayerActionTargetMenu(actionKey) {
     this.clearButtons();
-    const W = this.scale.width;
+    const W = this.battleW;
     const H = this.scale.height;
     const pa = PLAYER_ACTIONS[actionKey];
     const opponentChar = this.selectingPlayer === 1 ? this.p2Active : this.p1Active;
@@ -319,7 +346,7 @@ class BattleScene extends Phaser.Scene {
   // ── Character Action Menu ──────────────────────────────────────
   showCharActionMenu() {
     this.clearButtons();
-    const W = this.scale.width;
+    const W = this.battleW;
     const H = this.scale.height;
     const active = this.selectingPlayer === 1 ? this.p1Active : this.p2Active;
     const team = this.selectingPlayer === 1 ? this.p1Team : this.p2Team;
@@ -389,7 +416,7 @@ class BattleScene extends Phaser.Scene {
   // ── Long Range Target (character attack) ────────────────────────
   showLongRangeTargetMenu(atkKey) {
     this.clearButtons();
-    const W = this.scale.width;
+    const W = this.battleW;
     const H = this.scale.height;
     const atk = ATTACKS[atkKey];
     const opponentChar = this.selectingPlayer === 1 ? this.p2Active : this.p1Active;
@@ -420,7 +447,7 @@ class BattleScene extends Phaser.Scene {
   // ── Switch Menu ─────────────────────────────────────────────────
   showSwitchMenu() {
     this.clearButtons();
-    const W = this.scale.width;
+    const W = this.battleW;
     const H = this.scale.height;
     const team = this.selectingPlayer === 1 ? this.p1Team : this.p2Team;
     const activeIdx = this.selectingPlayer === 1 ? this.p1Index : this.p2Index;
@@ -487,6 +514,7 @@ class BattleScene extends Phaser.Scene {
   resolveRound() {
     this.phase = 'resolve';
     this.roundNumber++;
+    this.log.push(`── Round ${this.roundNumber} ──`);
 
     // Track blocking/protecting state for this round
     this.p1Blocking = (this.p1PlayerAction.key === 'block');
