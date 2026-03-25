@@ -219,6 +219,48 @@ Knight ✨, Mage 🔥❄️, Cleric ✨, Rogue 🌑, Warlock 🌑🔥, Paladin �
 - Sorcerer: +Meteor Strike, +Doom Curse
 - Warlock: +Doom Curse
 
+### Heal Rework
+- All heals (attacks + abilities) now percentage-based off caster's max HP
+- `power` on heal attacks = percentage (e.g. `power: 40` = 40% of caster's max HP)
+- Abilities use `"percent": 10` field (Divine Aura, Soul Drain = 10% max HP)
+- Delayed heals snapshot caster's maxHP at cast time — stays constant regardless of who it lands on
+- Paladin (110 HP) using Heal (40%) = 44 HP. Same Paladin's Wish hitting a Mage = still 55 HP (50% of Paladin's 110)
+
+### Stackable Flag
+- `"stackable": false` (default) — can't overlap with itself while pending (Meteor Strike, Regenerate)
+- `"stackable": true` — can fire multiple overlapping instances (Arrow Barrage)
+
+### New Attacks (additional)
+- **Wish** 💚⏳1 — 50% max HP heal delayed 1 turn (Cleric, Paladin)
+- **Arrow Barrage** ☄️⏳1 — 35 power physical ice hit, stackable (Ranger)
+
+### Held Item System
+- Each character holds 1 item, selected during team builder (after ability, before stats)
+- Multiple characters can hold the same item
+- Items shown in battle UI under stats; consumed items show "(item used)"
+- Data-driven: `src/data/items/` with same modular JSON pattern
+
+**Items:**
+
+| Item | Emoji | Trigger | Consumable | Effect |
+|------|-------|---------|------------|--------|
+| Healing Herb | 🌿 | Below 50% HP | Yes | Heal 25% max HP |
+| Fire Ward | 🔥 | Hit by Fire | Yes | Halve incoming damage |
+| Ice Ward | ❄️ | Hit by Ice | Yes | Halve incoming damage |
+| Lightning Ward | ⚡ | Hit by Lightning | Yes | Halve incoming damage |
+| Holy Ward | ✨ | Hit by Holy | Yes | Halve incoming damage |
+| Dark Ward | 🌑 | Hit by Dark | Yes | Halve incoming damage |
+| Life Seed | 🌱 | Turn end | No | Heal 5% max HP per turn |
+| War Belt | ⚔️ | Passive | No | +30% physical damage, physical/status/heal moves only |
+| Spell Tome | 📖 | Passive | No | +30% magic damage, magic/status/heal moves only |
+
+**Item Hook Integration:**
+- Ward: damage reduction applied before damage in `executeAttack`
+- Boost: multiplier applied to matching move types before damage
+- Healing Herb: triggers after taking damage, before KO check (can save from KO)
+- Life Seed: fires alongside `turnEnd` ability hooks
+- Restrictions: incompatible attack buttons greyed out in battle menu
+
 ### Ideas / Future Work
 - Visual upgrades (sprites, animations, effects)
 - More characters and attacks
