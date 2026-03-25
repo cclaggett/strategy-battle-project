@@ -2,6 +2,6 @@
   "id": "soulDrain",
   "name": "Soul Drain",
   "trigger": "onDealDamage",
-  "description": "After dealing damage, heal 10 HP",
-  "effects": [{ "type": "heal", "target": "self", "amount": 10 }]
+  "description": "After dealing damage, heal 10% max HP",
+  "effects": [{ "type": "heal", "target": "self", "percent": 10 }]
 }

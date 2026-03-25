@@ -68,7 +68,8 @@ class BattleScene extends Phaser.Scene {
       } else if (fx.type === 'heal') {
         const target = fx.target === 'self' ? char : enemy;
         if (!target || !target.alive) continue;
-        const healed = Math.min(fx.amount, target.maxHp - target.currentHp);
+        const healAmt = fx.percent ? Math.round(target.maxHp * fx.percent / 100) : (fx.amount || 0);
+        const healed = Math.min(healAmt, target.maxHp - target.currentHp);
         if (healed > 0) {
           target.currentHp += healed;
           this.log.push(`${target.name} heals ${healed} HP!`);
