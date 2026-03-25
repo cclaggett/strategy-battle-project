@@ -1,0 +1,10 @@
+{
+  "id": "regenerate",
+  "name": "Regenerate",
+  "type": "heal",
+  "power": 20,
+  "duration": 3,
+  "description": "Heals caster at end of turn for 3 turns",
+  "priority": 0,
+  "damageType": "holy"
+}

@@ -14,7 +14,9 @@
     "iceSpear",
     "darkPulse",
     "meditate",
-    "hex"
+    "hex",
+    "meteorStrike",
+    "doomCurse"
   ],
   "abilityPool": [
     "overcharge",

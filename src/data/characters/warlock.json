@@ -14,7 +14,8 @@
     "heal",
     "arcaneBlast",
     "hex",
-    "intimidate"
+    "intimidate",
+    "doomCurse"
   ],
   "abilityPool": [
     "soulDrain",

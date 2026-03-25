@@ -15,7 +15,8 @@
     "cleave",
     "warCry",
     "ironWall",
-    "protect"
+    "protect",
+    "regenerate"
   ],
   "abilityPool": [
     "holyShield",

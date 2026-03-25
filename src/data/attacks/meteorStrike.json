@@ -1,0 +1,11 @@
+{
+  "id": "meteorStrike",
+  "name": "Meteor Strike",
+  "type": "magic",
+  "power": 100,
+  "delay": 2,
+  "description": "Massive fireball that lands after 2 turns",
+  "priority": 0,
+  "damageType": "fire",
+  "spread": true
+}

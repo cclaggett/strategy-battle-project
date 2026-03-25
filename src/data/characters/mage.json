@@ -14,7 +14,8 @@
     "arcaneBlast",
     "darkPulse",
     "meditate",
-    "hex"
+    "hex",
+    "meteorStrike"
   ],
   "abilityPool": [
     "arcaneShield",

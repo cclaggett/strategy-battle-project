@@ -1,0 +1,14 @@
+{
+  "id": "doomCurse",
+  "name": "Doom Curse",
+  "type": "status",
+  "power": 0,
+  "delay": 1,
+  "description": "Curses enemy — DEF and RES drop after 1 turn",
+  "priority": 0,
+  "damageType": "dark",
+  "statFx": [
+    { "stat": "def", "stages": -1, "target": "enemy" },
+    { "stat": "mDef", "stages": -1, "target": "enemy" }
+  ]
+}

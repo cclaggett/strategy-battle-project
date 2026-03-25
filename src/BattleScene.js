@@ -25,6 +25,12 @@ class BattleScene extends Phaser.Scene {
     this.log = [];
     this.selectingPlayer = 1;
     this.roundNumber = 0;
+
+    // Pending multi-turn effects queue
+    // Each entry: { id, atkKey, casterSnap, sourcePlayer, targetPosition ('self'|'enemy'),
+    //               turnsLeft, duration?, totalDuration?, type: 'delay'|'duration' }
+    this.pendingEffects = [];
+    this.nextPendingId = 1;
   }
 
   makeChar(key, attacks, ability, bonuses) {
@@ -158,6 +164,8 @@ class BattleScene extends Phaser.Scene {
     this.buttons = [];
     this.promptText = this.add.text(BW / 2, H * 0.63, '', { fontSize: '14px', fill: '#fff', fontFamily: 'monospace' }).setOrigin(0.5);
 
+    this.pendingIndicators = [];
+
     // Fire onEntry for starting characters
     this.fireAbilityHooks('onEntry', { char: this.p1Active, enemy: this.p2Active, player: 1 });
     this.fireAbilityHooks('onEntry', { char: this.p2Active, enemy: this.p1Active, player: 2 });
@@ -218,6 +226,53 @@ class BattleScene extends Phaser.Scene {
 
     this.p1Team.forEach((c, i) => this.p1Dots[i].setFillStyle(c.alive ? 0x53a8b6 : 0x333333));
     this.p2Team.forEach((c, i) => this.p2Dots[i].setFillStyle(c.alive ? 0xe94560 : 0x333333));
+
+    // ── Pending effect countdown indicators ──
+    if (this.pendingIndicators) {
+      this.pendingIndicators.forEach(t => t.destroy());
+    }
+    this.pendingIndicators = [];
+    const BW = this.battleW;
+    const H = this.scale.height;
+
+    // Group pending effects by target position
+    const p1Incoming = []; // effects targeting P1's active slot
+    const p2Incoming = []; // effects targeting P2's active slot
+
+    for (const effect of this.pendingEffects) {
+      const atk = ATTACKS[effect.atkKey];
+      let emoji;
+      if (atk.type === 'heal') emoji = '💚';
+      else if (atk.type === 'status') emoji = '🔮';
+      else emoji = '☄️';
+
+      const label = `${emoji}${effect.turnsLeft}`;
+
+      if (effect.targetPosition === 'self') {
+        // Self-targeting goes on the caster's side
+        if (effect.sourcePlayer === 1) p1Incoming.push(label);
+        else p2Incoming.push(label);
+      } else {
+        // Enemy-targeting goes on the enemy side
+        if (effect.sourcePlayer === 1) p2Incoming.push(label);
+        else p1Incoming.push(label);
+      }
+    }
+
+    // Render indicators below the character sprites
+    const indicatorY = H * 0.38;
+    p1Incoming.forEach((label, i) => {
+      const t = this.add.text(BW * 0.25 - 30 + i * 30, indicatorY, label, {
+        fontSize: '13px', fill: '#ff6', fontFamily: 'monospace'
+      }).setOrigin(0.5);
+      this.pendingIndicators.push(t);
+    });
+    p2Incoming.forEach((label, i) => {
+      const t = this.add.text(BW * 0.75 - 30 + i * 30, indicatorY, label, {
+        fontSize: '13px', fill: '#ff6', fontFamily: 'monospace'
+      }).setOrigin(0.5);
+      this.pendingIndicators.push(t);
+    });
 
     // Update log panel — show all entries, auto-scroll to bottom
     const logStr = this.log.map((entry, i) => entry).join('\n');
@@ -383,6 +438,8 @@ class BattleScene extends Phaser.Scene {
         }).join(' ');
         subLabel += ` ${fxStr}`;
       }
+      if (atk.delay) subLabel += ` ⏳${atk.delay}`;
+      if (atk.duration) subLabel += ` 🔄${atk.duration}`;
       const sub = this.add.text(bx, by + 10, subLabel, { fontSize: '9px', fill: '#aaa', fontFamily: 'monospace' }).setOrigin(0.5);
 
       bg.on('pointerover', () => bg.setFillStyle(0xe94560));
@@ -678,11 +735,229 @@ class BattleScene extends Phaser.Scene {
     return delay;
   }
 
+  // ── Pending Effects: Queue a delayed or duration effect ────────
+  queuePendingEffect(atkKey, attacker, attackerPlayer, targetPlayer) {
+    const atk = ATTACKS[atkKey];
+    const isDelay = (atk.delay || 0) > 0;
+    const isDuration = (atk.duration || 0) > 0;
+
+    // Snapshot caster stats at cast time (for damage calc later)
+    const casterSnap = {
+      key: attacker.key,
+      name: attacker.name,
+      atk: attacker.atk,
+      def: attacker.def,
+      mAtk: attacker.mAtk,
+      mDef: attacker.mDef,
+      spd: attacker.spd,
+      stages: { ...attacker.stages },
+      types: attacker.types ? [...attacker.types] : [],
+      alive: true
+    };
+
+    // Determine target position: 'self' for heals/self-buffs, 'enemy' for attacks
+    const isSelfTarget = atk.type === 'heal' || atk.type === 'status';
+    const targetPosition = isSelfTarget ? 'self' : 'enemy';
+
+    if (isDelay && isDuration) {
+      // Delay before duration starts — queue delay first
+      this.pendingEffects.push({
+        id: this.nextPendingId++,
+        atkKey,
+        casterSnap,
+        sourcePlayer: attackerPlayer,
+        targetPosition,
+        targetPlayerDirect: targetPlayer,
+        turnsLeft: atk.delay,
+        pendingDuration: atk.duration,
+        totalDuration: atk.duration,
+        phase: 'delay'
+      });
+    } else if (isDelay) {
+      this.pendingEffects.push({
+        id: this.nextPendingId++,
+        atkKey,
+        casterSnap,
+        sourcePlayer: attackerPlayer,
+        targetPosition,
+        targetPlayerDirect: targetPlayer,
+        turnsLeft: atk.delay,
+        phase: 'delay'
+      });
+    } else if (isDuration) {
+      // Duration starts immediately — first tick this round
+      this.pendingEffects.push({
+        id: this.nextPendingId++,
+        atkKey,
+        casterSnap,
+        sourcePlayer: attackerPlayer,
+        targetPosition,
+        targetPlayerDirect: targetPlayer,
+        turnsLeft: atk.duration,
+        totalDuration: atk.duration,
+        phase: 'duration'
+      });
+    }
+
+    const emoji = atk.type === 'heal' ? '💚' : atk.type === 'status' ? '🔮' : '☄️';
+    const turns = atk.delay || atk.duration;
+    this.log.push(`${attacker.name} uses ${atk.name}! ${emoji} (${isDelay ? 'lands in' : 'lasts'} ${turns} turn${turns > 1 ? 's' : ''})`);
+  }
+
+  // ── Pending Effects: Resolve the target character for a position ──
+  resolveTarget(effect) {
+    if (effect.targetPosition === 'self') {
+      // Self-targeting: the caster's slot
+      const team = effect.sourcePlayer === 1 ? this.p1Team : this.p2Team;
+      const idx = effect.sourcePlayer === 1 ? this.p1Index : this.p2Index;
+      return { char: team[idx], player: effect.sourcePlayer };
+    } else {
+      // Enemy position: whoever is currently active on the opposing side
+      const enemyPlayer = effect.sourcePlayer === 1 ? 2 : 1;
+      const char = enemyPlayer === 1 ? this.p1Active : this.p2Active;
+      return { char, player: enemyPlayer };
+    }
+  }
+
+  // ── Pending Effects: Fire a single effect tick ────────────────
+  firePendingEffect(effect) {
+    const atk = ATTACKS[effect.atkKey];
+    const { char: target, player: targetPlayer } = this.resolveTarget(effect);
+
+    if (atk.type === 'heal') {
+      if (!target || !target.alive) {
+        this.log.push(`${atk.name} fizzles — no valid target!`);
+        return;
+      }
+      const healAmt = Math.round(atk.power * (effect.casterSnap.mAtk / 30));
+      const healed = Math.min(healAmt, target.maxHp - target.currentHp);
+      if (healed > 0) {
+        target.currentHp += healed;
+        this.log.push(`💚 ${atk.name} heals ${target.name} for ${healed} HP!`);
+      } else {
+        this.log.push(`💚 ${atk.name} — ${target.name} is already at full HP!`);
+      }
+    } else if (atk.type === 'status') {
+      // Apply stat effects to the target position
+      if (atk.statFx) {
+        atk.statFx.forEach(fx => {
+          const fxTarget = fx.target === 'self' ? this.resolveTarget({ ...effect, targetPosition: 'self' }).char
+                                                 : this.resolveTarget({ ...effect, targetPosition: 'enemy' }).char;
+          if (!fxTarget || !fxTarget.alive) return;
+          fxTarget.stages[fx.stat] = (fxTarget.stages[fx.stat] || 0) + fx.stages;
+          const statLabel = STAT_LABELS[fx.stat] || fx.stat;
+          const dir = fx.stages > 0 ? 'rose' : 'fell';
+          const mult = stageMultiplier(fxTarget.stages[fx.stat]);
+          this.log.push(`🔮 ${atk.name} — ${fxTarget.name}'s ${statLabel} ${dir}! (×${mult.toFixed(2)})`);
+        });
+      }
+    } else {
+      // Damage attack
+      if (!target || !target.alive) {
+        // If targeting enemy position and character is dead, still deal spread/player damage
+        if (effect.targetPlayerDirect) {
+          this.dealPlayerDamage(targetPlayer, 1, `☄️ ${atk.name} strikes Player ${targetPlayer}`);
+        } else if (atk.spread) {
+          const defenderPlayer = effect.sourcePlayer === 1 ? 2 : 1;
+          this.dealPlayerDamage(defenderPlayer, 1, `☄️ ${atk.name} spreads to hit Player ${defenderPlayer}`);
+          this.log.push(`☄️ ${atk.name} lands but the target slot is empty!`);
+        } else {
+          this.log.push(`☄️ ${atk.name} lands but the target slot is empty!`);
+        }
+        return;
+      }
+
+      if (effect.targetPlayerDirect) {
+        const defenderPlayer = effect.sourcePlayer === 1 ? 2 : 1;
+        this.dealPlayerDamage(defenderPlayer, 1, `☄️ ${atk.name} strikes Player ${defenderPlayer}`);
+      } else {
+        // Calculate damage using snapshotted caster stats
+        const result = calcDamageResult(effect.atkKey, effect.casterSnap, target);
+        if (result.isImmune) {
+          this.log.push(`☄️ ${atk.name} lands on ${target.name} — immune!`);
+          return;
+        }
+        target.currentHp = Math.max(0, target.currentHp - result.damage);
+        const critTag = result.isCrit ? ' 💥' : '';
+        this.log.push(`☄️ ${atk.name} lands on ${target.name} for ${result.damage} dmg!${critTag}`);
+        if (result.typeLabel) this.log.push(result.typeLabel);
+
+        const defenderPlayer = effect.sourcePlayer === 1 ? 2 : 1;
+        if (target.currentHp <= 0) {
+          target.alive = false;
+          this.log.push(`${target.name} is KO'd!`);
+          this.fireAbilityHooks('onKO', { char: target, enemy: effect.casterSnap, player: defenderPlayer });
+          this.dealPlayerDamage(defenderPlayer, 1, `Player ${defenderPlayer} loses 1 HP from the KO`);
+        }
+
+        if (atk.spread) {
+          this.dealPlayerDamage(defenderPlayer, 1, `☄️ ${atk.name} spreads to hit Player ${defenderPlayer}`);
+        }
+      }
+
+      // Stat effects from the attack
+      if (atk.statFx) {
+        atk.statFx.forEach(fx => {
+          const fxTarget = fx.target === 'self' ? this.resolveTarget({ ...effect, targetPosition: 'self' }).char : target;
+          if (!fxTarget || !fxTarget.alive) return;
+          fxTarget.stages[fx.stat] = (fxTarget.stages[fx.stat] || 0) + fx.stages;
+          const statLabel = STAT_LABELS[fx.stat] || fx.stat;
+          const dir = fx.stages > 0 ? 'rose' : 'fell';
+          const mult = stageMultiplier(fxTarget.stages[fx.stat]);
+          this.log.push(`${fxTarget.name}'s ${statLabel} ${dir}! (×${mult.toFixed(2)})`);
+        });
+      }
+    }
+  }
+
+  // ── Pending Effects: Tick all effects (called at round end) ───
+  tickPendingEffects() {
+    const toRemove = [];
+
+    for (const effect of this.pendingEffects) {
+      effect.turnsLeft--;
+
+      if (effect.phase === 'delay' && effect.turnsLeft <= 0) {
+        // Delay expired
+        if (effect.pendingDuration) {
+          // Transition to duration phase
+          this.firePendingEffect(effect);
+          effect.phase = 'duration';
+          effect.turnsLeft = effect.pendingDuration - 1; // first tick just happened
+          effect.pendingDuration = null;
+          if (effect.turnsLeft <= 0) {
+            toRemove.push(effect.id);
+          }
+        } else {
+          // One-shot delayed effect
+          this.firePendingEffect(effect);
+          toRemove.push(effect.id);
+        }
+      } else if (effect.phase === 'duration' && effect.turnsLeft >= 0) {
+        // Duration tick
+        this.firePendingEffect(effect);
+        if (effect.turnsLeft <= 0) {
+          toRemove.push(effect.id);
+        }
+      }
+    }
+
+    // Clean up expired effects
+    this.pendingEffects = this.pendingEffects.filter(e => !toRemove.includes(e.id));
+  }
+
   // ── Execute Character Attack ────────────────────────────────────
   executeAttack(attacker, defender, atkKey, attackerPlayer, targetPlayer) {
     if (attacker.currentHp <= 0) return;
 
     const atk = ATTACKS[atkKey];
+
+    // Check if this is a delayed or duration move
+    if ((atk.delay || 0) > 0 || (atk.duration || 0) > 0) {
+      this.queuePendingEffect(atkKey, attacker, attackerPlayer, targetPlayer);
+      return;
+    }
+
     const result = calcDamageResult(atkKey, attacker, defender);
     const defenderPlayer = attackerPlayer === 1 ? 2 : 1;
 
@@ -800,9 +1075,34 @@ class BattleScene extends Phaser.Scene {
       this.fireAbilityHooks('turnEnd', { char: this.p2Active, enemy: this.p1Active, player: 2 });
     }
 
+    // Tick pending multi-turn effects
+    this.tickPendingEffects();
+
     // Tick cooldowns down
     this.p1Actions.forEach(a => { if (a.cooldownLeft > 0) a.cooldownLeft--; });
     this.p2Actions.forEach(a => { if (a.cooldownLeft > 0) a.cooldownLeft--; });
+
+    // Re-check for KOs caused by pending effects (e.g. delayed damage)
+    if (!this.p1Active.alive && this.p1Team.some(c => c.alive)) this.forceSwap(1);
+    if (!this.p2Active.alive && this.p2Team.some(c => c.alive)) this.forceSwap(2);
+
+    // Check win condition again after pending effects
+    const p1StillAlive = this.p1Team.some(c => c.alive) && this.p1PlayerHp > 0;
+    const p2StillAlive = this.p2Team.some(c => c.alive) && this.p2PlayerHp > 0;
+    if (!p1StillAlive || !p2StillAlive) {
+      this.refreshUI();
+      // Determine winner
+      const p1Lost2 = !this.p1Team.some(c => c.alive) || this.p1PlayerHp <= 0;
+      const p2Lost2 = !this.p2Team.some(c => c.alive) || this.p2PlayerHp <= 0;
+      let winner;
+      if (p1Lost2 && p2Lost2) winner = 'Draw';
+      else if (p2Lost2) winner = 'Player 1';
+      else winner = 'Player 2';
+      this.phase = 'gameover';
+      this.promptText.setText(`${winner} wins!\nClick to play again.`);
+      this.input.once('pointerdown', () => this.scene.start('TeamBuilderScene'));
+      return;
+    }
 
     this.refreshUI();
     this.startNextRound();
