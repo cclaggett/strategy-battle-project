@@ -1,0 +1,10 @@
+{
+  "id": "warBelt",
+  "name": "War Belt",
+  "emoji": "⚔️",
+  "description": "+30% physical damage, but can only use physical/status moves",
+  "trigger": "passive",
+  "consumable": false,
+  "effects": [{ "type": "boostDamage", "moveType": "physical", "multiplier": 1.3 }],
+  "restriction": { "allowedTypes": ["physical", "status", "protect", "heal"] }
+}

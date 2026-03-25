@@ -1,0 +1,10 @@
+{
+  "id": "lightningWard",
+  "name": "Lightning Ward",
+  "emoji": "⚡",
+  "description": "Consumed when hit by Lightning — halves the damage",
+  "trigger": "onHitByType",
+  "triggerType": "lightning",
+  "consumable": true,
+  "effects": [{ "type": "reduceDamage", "multiplier": 0.5 }]
+}

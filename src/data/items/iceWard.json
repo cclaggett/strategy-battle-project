@@ -1,0 +1,10 @@
+{
+  "id": "iceWard",
+  "name": "Ice Ward",
+  "emoji": "❄️",
+  "description": "Consumed when hit by Ice — halves the damage",
+  "trigger": "onHitByType",
+  "triggerType": "ice",
+  "consumable": true,
+  "effects": [{ "type": "reduceDamage", "multiplier": 0.5 }]
+}

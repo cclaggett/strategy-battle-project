@@ -1,0 +1,10 @@
+{
+  "id": "spellTome",
+  "name": "Spell Tome",
+  "emoji": "📖",
+  "description": "+30% magic damage, but can only use magic/status moves",
+  "trigger": "passive",
+  "consumable": false,
+  "effects": [{ "type": "boostDamage", "moveType": "magic", "multiplier": 1.3 }],
+  "restriction": { "allowedTypes": ["magic", "status", "protect", "heal"] }
+}

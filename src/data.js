@@ -9,6 +9,7 @@ let ATTACKS = {};
 let ROSTER = {};
 let PLAYER_ACTIONS = {};
 let ABILITIES = {};
+let ITEMS = {};
 let TYPE_CHART = {};
 let STAT_POINTS = 50;
 let STAT_MAX_PER = 20;
@@ -49,11 +50,12 @@ async function loadGameData() {
   STAT_LABELS = cfg.statLabels;
 
   // Load all entities in parallel
-  const [attacks, characters, playerActions, abilities, typeChart] = await Promise.all([
+  const [attacks, characters, playerActions, abilities, items, typeChart] = await Promise.all([
     loadFolder('attacks'),
     loadFolder('characters'),
     loadFolder('player-actions'),
     loadFolder('abilities'),
+    loadFolder('items'),
     fetchJSON(`${DATA_ROOT}/types.json`),
   ]);
 
@@ -61,9 +63,10 @@ async function loadGameData() {
   ROSTER = characters;
   PLAYER_ACTIONS = playerActions;
   ABILITIES = abilities;
+  ITEMS = items;
   TYPE_CHART = typeChart;
 
-  console.log(`Loaded ${Object.keys(ATTACKS).length} attacks, ${Object.keys(ROSTER).length} characters, ${Object.keys(PLAYER_ACTIONS).length} player actions, ${Object.keys(ABILITIES).length} abilities, ${Object.keys(TYPE_CHART.types).length} types`);
+  console.log(`Loaded ${Object.keys(ATTACKS).length} attacks, ${Object.keys(ROSTER).length} characters, ${Object.keys(PLAYER_ACTIONS).length} player actions, ${Object.keys(ABILITIES).length} abilities, ${Object.keys(ITEMS).length} items, ${Object.keys(TYPE_CHART.types).length} types`);
 }
 
 // ── Formulas (kept in JS — they need logic) ─────────────────────────

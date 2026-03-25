@@ -1,0 +1,9 @@
+{
+  "id": "healingHerb",
+  "name": "Healing Herb",
+  "emoji": "🌿",
+  "description": "Consumed below 50% HP — heals 25% max HP",
+  "trigger": "onHpBelow50",
+  "consumable": true,
+  "effects": [{ "type": "heal", "percent": 25 }]
+}

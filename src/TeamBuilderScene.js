@@ -6,7 +6,7 @@ class TeamBuilderScene extends Phaser.Scene {
 
   init() {
     this.currentPlayer = 1;
-    this.step = 'pickChar';   // 'pickChar' | 'pickAttacks' | 'allocStats' | 'pickPlayerActions'
+    this.step = 'pickChar';   // 'pickChar' | 'pickAttacks' | 'pickAbility' | 'pickItem' | 'allocStats' | 'pickPlayerActions'
     this.p1Picks = [];
     this.p2Picks = [];
     this.p1PlayerActions = [];
@@ -14,6 +14,7 @@ class TeamBuilderScene extends Phaser.Scene {
     this.currentCharKey = null;
     this.selectedAttacks = [];
     this.selectedAbility = null;
+    this.selectedItem = null;
     this.selectedPlayerActions = [];
     this.statAlloc = {};
     this.usedKeys = new Set();
@@ -153,6 +154,7 @@ class TeamBuilderScene extends Phaser.Scene {
       key: c.key,
       attacks: [...c.attacks],
       ability: c.ability || null,
+      item: c.item || null,
       bonuses: { ...c.bonuses },
     }));
 
@@ -196,11 +198,12 @@ class TeamBuilderScene extends Phaser.Scene {
       const char = ROSTER[p.key];
       const atkNames = p.attacks.map(a => ATTACKS[a].name).join(', ');
       const abilityName = p.ability && ABILITIES[p.ability] ? ` | ${ABILITIES[p.ability].name}` : '';
+      const itemName = p.item && ITEMS[p.item] ? ` ${ITEMS[p.item].emoji}${ITEMS[p.item].name}` : '';
       const bonusStr = ALLOCATABLE_STATS
         .filter(s => p.bonuses[s] > 0)
         .map(s => `${STAT_LABELS[s]}+${p.bonuses[s]}`)
         .join(' ');
-      return `${char.name}: ${atkNames}${abilityName}${bonusStr ? '  [' + bonusStr + ']' : ''}`;
+      return `${char.name}: ${atkNames}${abilityName}${itemName}${bonusStr ? '  [' + bonusStr + ']' : ''}`;
     });
 
     const playerActions = this.currentPlayer === 1 ? this.p1PlayerActions : this.p2PlayerActions;
@@ -229,6 +232,7 @@ class TeamBuilderScene extends Phaser.Scene {
             key: p.key,
             attacks: [...p.attacks],
             ability: p.ability || null,
+            item: p.item || null,
             bonuses: { ...p.bonuses },
           })),
           playerActions: [...playerActions],
@@ -472,10 +476,9 @@ class TeamBuilderScene extends Phaser.Scene {
     this.subtitleText.setText('Choose 1 passive ability');
 
     if (pool.length === 0) {
-      // No abilities available, skip to stats
-      this.statAlloc = {};
-      ALLOCATABLE_STATS.forEach(s => this.statAlloc[s] = 0);
-      this.showStatAlloc();
+      // No abilities available, skip to items
+      this.selectedItem = null;
+      this.showItemSelect();
       return;
     }
 
@@ -521,13 +524,12 @@ class TeamBuilderScene extends Phaser.Scene {
 
     if (this.selectedAbility) {
       const confirmBg = this.add.rectangle(W / 2, H - 60, 200, 40, 0x166534).setStrokeStyle(2, 0x4ade80).setInteractive({ useHandCursor: true });
-      const confirmTxt = this.add.text(W / 2, H - 60, '✓ Pick Stats →', { fontSize: '16px', fill: '#4ade80', fontFamily: 'monospace' }).setOrigin(0.5);
+      const confirmTxt = this.add.text(W / 2, H - 60, '✓ Pick Item →', { fontSize: '16px', fill: '#4ade80', fontFamily: 'monospace' }).setOrigin(0.5);
       confirmBg.on('pointerover', () => confirmBg.setFillStyle(0x22c55e));
       confirmBg.on('pointerout', () => confirmBg.setFillStyle(0x166534));
       confirmBg.on('pointerdown', () => {
-        this.statAlloc = {};
-        ALLOCATABLE_STATS.forEach(s => this.statAlloc[s] = 0);
-        this.showStatAlloc();
+        this.selectedItem = null;
+        this.showItemSelect();
       });
       this.buttons.push(confirmBg, confirmTxt);
     }
@@ -538,6 +540,68 @@ class TeamBuilderScene extends Phaser.Scene {
     this.buttons.push(backBg, backTxt);
 
     this.infoText.setText('');
+  }
+
+  // ── Item Selection ──────────────────────────────────────────────
+  showItemSelect() {
+    this.clearButtons();
+    this.step = 'pickItem';
+    const W = this.scale.width;
+    const H = this.scale.height;
+    const char = ROSTER[this.currentCharKey];
+    const accent = this.currentPlayer === 1 ? '#53a8b6' : '#e94560';
+
+    this.titleText.setText(`Player ${this.currentPlayer} — Item for ${char.name}`);
+    this.subtitleText.setText('Choose 1 held item (or skip for none)');
+
+    const itemKeys = Object.keys(ITEMS);
+    const startY = 100;
+
+    itemKeys.forEach((key, i) => {
+      const item = ITEMS[key];
+      const by = startY + i * 48;
+      const isSelected = this.selectedItem === key;
+
+      const bg = this.add.rectangle(W / 2, by, 600, 38, isSelected ? 0x1a4a1a : 0x16213e)
+        .setStrokeStyle(1, isSelected ? 0x4ade80 : 0x333333)
+        .setInteractive({ useHandCursor: true });
+
+      let label = `${item.emoji} ${item.name}`;
+      if (item.consumable) label += '  [consumable]';
+      label += `  — ${item.description}`;
+
+      const txt = this.add.text(W / 2, by, label, {
+        fontSize: '11px', fill: isSelected ? '#4ade80' : '#ccc', fontFamily: 'monospace'
+      }).setOrigin(0.5);
+
+      bg.on('pointerdown', () => {
+        this.selectedItem = isSelected ? null : key;
+        this.showItemSelect();
+      });
+
+      this.buttons.push(bg, txt);
+    });
+
+    // Confirm with item
+    const hasSelection = this.selectedItem !== null;
+    const confirmLabel = hasSelection ? '✓ Pick Stats →' : 'Skip (no item) →';
+    const confirmBg = this.add.rectangle(W / 2, H - 60, 240, 40, 0x166534).setStrokeStyle(2, 0x4ade80).setInteractive({ useHandCursor: true });
+    const confirmTxt = this.add.text(W / 2, H - 60, confirmLabel, { fontSize: '16px', fill: '#4ade80', fontFamily: 'monospace' }).setOrigin(0.5);
+    confirmBg.on('pointerover', () => confirmBg.setFillStyle(0x22c55e));
+    confirmBg.on('pointerout', () => confirmBg.setFillStyle(0x166534));
+    confirmBg.on('pointerdown', () => {
+      this.statAlloc = {};
+      ALLOCATABLE_STATS.forEach(s => this.statAlloc[s] = 0);
+      this.showStatAlloc();
+    });
+    this.buttons.push(confirmBg, confirmTxt);
+
+    const backBg = this.add.rectangle(80, H - 60, 120, 36, 0x333333).setStrokeStyle(1, 0x555555).setInteractive({ useHandCursor: true });
+    const backTxt = this.add.text(80, H - 60, '← Back', { fontSize: '13px', fill: '#aaa', fontFamily: 'monospace' }).setOrigin(0.5);
+    backBg.on('pointerdown', () => this.showAbilitySelect());
+    this.buttons.push(backBg, backTxt);
+
+    this.infoText.setText('Multiple characters can hold the same item.');
   }
 
   // ── Stat Allocation ────────────────────────────────────────────
@@ -617,6 +681,7 @@ class TeamBuilderScene extends Phaser.Scene {
       key: this.currentCharKey,
       attacks: [...this.selectedAttacks],
       ability: this.selectedAbility,
+      item: this.selectedItem,
       bonuses: { ...this.statAlloc },
     });
     this.usedKeys.add(this.currentCharKey);

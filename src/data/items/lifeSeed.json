@@ -1,0 +1,9 @@
+{
+  "id": "lifeSeed",
+  "name": "Life Seed",
+  "emoji": "🌱",
+  "description": "Heals 5% max HP at end of each turn",
+  "trigger": "turnEnd",
+  "consumable": false,
+  "effects": [{ "type": "heal", "percent": 5 }]
+}

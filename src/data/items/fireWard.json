@@ -1,0 +1,10 @@
+{
+  "id": "fireWard",
+  "name": "Fire Ward",
+  "emoji": "🔥",
+  "description": "Consumed when hit by Fire — halves the damage",
+  "trigger": "onHitByType",
+  "triggerType": "fire",
+  "consumable": true,
+  "effects": [{ "type": "reduceDamage", "multiplier": 0.5 }]
+}

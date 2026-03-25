@@ -1,0 +1,10 @@
+{
+  "id": "darkWard",
+  "name": "Dark Ward",
+  "emoji": "🌑",
+  "description": "Consumed when hit by Dark — halves the damage",
+  "trigger": "onHitByType",
+  "triggerType": "dark",
+  "consumable": true,
+  "effects": [{ "type": "reduceDamage", "multiplier": 0.5 }]
+}

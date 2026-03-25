@@ -1,0 +1,10 @@
+{
+  "id": "holyWard",
+  "name": "Holy Ward",
+  "emoji": "✨",
+  "description": "Consumed when hit by Holy — halves the damage",
+  "trigger": "onHitByType",
+  "triggerType": "holy",
+  "consumable": true,
+  "effects": [{ "type": "reduceDamage", "multiplier": 0.5 }]
+}

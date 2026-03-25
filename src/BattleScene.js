@@ -5,8 +5,8 @@ class BattleScene extends Phaser.Scene {
   }
 
   init(data) {
-    this.p1Team = data.p1Picks.map(p => this.makeChar(p.key, p.attacks, p.ability, p.bonuses));
-    this.p2Team = data.p2Picks.map(p => this.makeChar(p.key, p.attacks, p.ability, p.bonuses));
+    this.p1Team = data.p1Picks.map(p => this.makeChar(p.key, p.attacks, p.ability, p.bonuses, p.item));
+    this.p2Team = data.p2Picks.map(p => this.makeChar(p.key, p.attacks, p.ability, p.bonuses, p.item));
     this.p1Index = 0;
     this.p2Index = 0;
     this.p1Choice = null;
@@ -33,9 +33,9 @@ class BattleScene extends Phaser.Scene {
     this.nextPendingId = 1;
   }
 
-  makeChar(key, attacks, ability, bonuses) {
+  makeChar(key, attacks, ability, bonuses, item) {
     const t = ROSTER[key];
-    const char = { key, ...t, attacks, ability: ability || null, maxHp: t.hp, currentHp: t.hp, alive: true };
+    const char = { key, ...t, attacks, ability: ability || null, item: item || null, itemConsumed: false, maxHp: t.hp, currentHp: t.hp, alive: true };
     if (bonuses) {
       ALLOCATABLE_STATS.forEach(s => { char[s] += (bonuses[s] || 0); });
     }
@@ -82,6 +82,87 @@ class BattleScene extends Phaser.Scene {
         }
       }
     }
+  }
+
+  // ── Item Hook System ─────────────────────────────────────────
+  // Returns true if item was consumed/activated
+  getCharItem(char) {
+    if (!char || !char.item || char.itemConsumed) return null;
+    return ITEMS[char.item] || null;
+  }
+
+  fireItemTurnEnd(char, player) {
+    const item = this.getCharItem(char);
+    if (!item || item.trigger !== 'turnEnd' || !char.alive) return;
+    for (const fx of item.effects) {
+      if (fx.type === 'heal') {
+        const healAmt = Math.round(char.maxHp * fx.percent / 100);
+        const healed = Math.min(healAmt, char.maxHp - char.currentHp);
+        if (healed > 0) {
+          char.currentHp += healed;
+          this.log.push(`${item.emoji} ${char.name}'s ${item.name} heals ${healed} HP!`);
+        }
+      }
+    }
+  }
+
+  fireItemOnHpBelow50(char, player) {
+    const item = this.getCharItem(char);
+    if (!item || item.trigger !== 'onHpBelow50' || !char.alive) return;
+    if (char.currentHp > char.maxHp * 0.5) return;  // not below 50%
+    for (const fx of item.effects) {
+      if (fx.type === 'heal') {
+        const healAmt = Math.round(char.maxHp * fx.percent / 100);
+        const healed = Math.min(healAmt, char.maxHp - char.currentHp);
+        if (healed > 0) {
+          char.currentHp += healed;
+          this.log.push(`${item.emoji} ${char.name}'s ${item.name} activates — heals ${healed} HP!`);
+        }
+      }
+    }
+    if (item.consumable) {
+      char.itemConsumed = true;
+      this.log.push(`${item.emoji} ${item.name} was consumed!`);
+    }
+  }
+
+  // Returns a damage multiplier (for ward items). 1.0 = no reduction.
+  fireItemOnHitByType(char, damageType) {
+    const item = this.getCharItem(char);
+    if (!item || item.trigger !== 'onHitByType' || !char.alive) return 1.0;
+    if (item.triggerType !== damageType) return 1.0;
+    let mult = 1.0;
+    for (const fx of item.effects) {
+      if (fx.type === 'reduceDamage') {
+        mult *= fx.multiplier;
+      }
+    }
+    this.log.push(`${item.emoji} ${char.name}'s ${item.name} activates — damage reduced!`);
+    if (item.consumable) {
+      char.itemConsumed = true;
+      this.log.push(`${item.emoji} ${item.name} was consumed!`);
+    }
+    return mult;
+  }
+
+  // Returns damage multiplier for passive boost items
+  getItemDamageBoost(char, moveType) {
+    const item = this.getCharItem(char);
+    if (!item || item.trigger !== 'passive') return 1.0;
+    let mult = 1.0;
+    for (const fx of (item.effects || [])) {
+      if (fx.type === 'boostDamage' && fx.moveType === moveType) {
+        mult *= fx.multiplier;
+      }
+    }
+    return mult;
+  }
+
+  // Returns list of allowed attack types for a character (null = no restriction)
+  getItemAttackRestriction(char) {
+    const item = this.getCharItem(char);
+    if (!item || !item.restriction || !item.restriction.allowedTypes) return null;
+    return item.restriction.allowedTypes;
   }
 
   get p1Active() { return this.p1Team[this.p1Index]; }
@@ -214,15 +295,19 @@ class BattleScene extends Phaser.Scene {
 
     const p1AbilityStr = p1.ability && ABILITIES[p1.ability] ? `\n✦ ${ABILITIES[p1.ability].name}` : '';
     const p2AbilityStr = p2.ability && ABILITIES[p2.ability] ? `\n✦ ${ABILITIES[p2.ability].name}` : '';
+    const p1ItemObj = this.getCharItem(p1);
+    const p2ItemObj = this.getCharItem(p2);
+    const p1ItemStr = p1ItemObj ? `\n${p1ItemObj.emoji} ${p1ItemObj.name}` : (p1.item && p1.itemConsumed ? `\n(item used)` : '');
+    const p2ItemStr = p2ItemObj ? `\n${p2ItemObj.emoji} ${p2ItemObj.name}` : (p2.item && p2.itemConsumed ? `\n(item used)` : '');
     this.p1StatsText.setText(
       `${this.formatStat(p1, 'atk', 'ATK')}  ${this.formatStat(p1, 'def', 'DEF')}\n` +
       `${this.formatStat(p1, 'mAtk', 'MAG')}  ${this.formatStat(p1, 'mDef', 'RES')}\n` +
-      `${this.formatStat(p1, 'spd', 'SPD')}` + p1AbilityStr
+      `${this.formatStat(p1, 'spd', 'SPD')}` + p1AbilityStr + p1ItemStr
     );
     this.p2StatsText.setText(
       `${this.formatStat(p2, 'atk', 'ATK')}  ${this.formatStat(p2, 'def', 'DEF')}\n` +
       `${this.formatStat(p2, 'mAtk', 'MAG')}  ${this.formatStat(p2, 'mDef', 'RES')}\n` +
-      `${this.formatStat(p2, 'spd', 'SPD')}` + p2AbilityStr
+      `${this.formatStat(p2, 'spd', 'SPD')}` + p2AbilityStr + p2ItemStr
     );
 
     this.p1Team.forEach((c, i) => this.p1Dots[i].setFillStyle(c.alive ? 0x53a8b6 : 0x333333));
@@ -411,6 +496,9 @@ class BattleScene extends Phaser.Scene {
 
     this.promptText.setText(`Player ${this.selectingPlayer} — ${active.name}'s move`);
 
+    // Check item attack restrictions (e.g. War Belt = physical only)
+    const allowedTypes = this.getItemAttackRestriction(active);
+
     const atkCount = active.attacks.length;
     const canSwitch = team.some((c, i) => c.alive && i !== activeIdx);
     const totalButtons = atkCount + (canSwitch ? 1 : 0);
@@ -419,11 +507,14 @@ class BattleScene extends Phaser.Scene {
 
     active.attacks.forEach((atkKey, i) => {
       const atk = ATTACKS[atkKey];
+      const restricted = allowedTypes && !allowedTypes.includes(atk.type);
       const bx = startX + i * spacing;
       const by = H * 0.80;
 
-      const bg = this.add.rectangle(bx, by, spacing - 10, 44, color).setStrokeStyle(1, 0xffffff).setInteractive({ useHandCursor: true });
-      const txt = this.add.text(bx, by - 8, atk.name, { fontSize: '12px', fill: '#fff', fontFamily: 'monospace' }).setOrigin(0.5);
+      const btnColor = restricted ? 0x222222 : color;
+      const bg = this.add.rectangle(bx, by, spacing - 10, 44, btnColor).setStrokeStyle(1, restricted ? 0x444444 : 0xffffff);
+      if (!restricted) bg.setInteractive({ useHandCursor: true });
+      const txt = this.add.text(bx, by - 8, atk.name, { fontSize: '12px', fill: restricted ? '#555' : '#fff', fontFamily: 'monospace' }).setOrigin(0.5);
 
       let subLabel = atk.type;
       if (atk.damageType && TYPE_CHART.types[atk.damageType]) subLabel += ` ${TYPE_CHART.types[atk.damageType].emoji}`;
@@ -444,15 +535,17 @@ class BattleScene extends Phaser.Scene {
       if (atk.duration) subLabel += ` 🔄${atk.duration}`;
       const sub = this.add.text(bx, by + 10, subLabel, { fontSize: '9px', fill: '#aaa', fontFamily: 'monospace' }).setOrigin(0.5);
 
-      bg.on('pointerover', () => bg.setFillStyle(0xe94560));
-      bg.on('pointerout', () => bg.setFillStyle(color));
-      bg.on('pointerdown', () => {
-        if (atk.range === 'long') {
-          this.showLongRangeTargetMenu(atkKey);
-        } else {
-          this.onCharChoiceMade({ type: 'attack', key: atkKey, targetPlayer: false });
-        }
-      });
+      if (!restricted) {
+        bg.on('pointerover', () => bg.setFillStyle(0xe94560));
+        bg.on('pointerout', () => bg.setFillStyle(btnColor));
+        bg.on('pointerdown', () => {
+          if (atk.range === 'long') {
+            this.showLongRangeTargetMenu(atkKey);
+          } else {
+            this.onCharChoiceMade({ type: 'attack', key: atkKey, targetPlayer: false });
+          }
+        });
+      }
 
       this.buttons.push(bg, txt, sub);
     });
@@ -975,6 +1068,22 @@ class BattleScene extends Phaser.Scene {
     const result = calcDamageResult(atkKey, attacker, defender);
     const defenderPlayer = attackerPlayer === 1 ? 2 : 1;
 
+    // Apply item damage boost (passive items like War Belt / Spell Tome)
+    if (result.damage > 0 && !result.isImmune && atk.type !== 'heal' && atk.type !== 'status') {
+      const boostMult = this.getItemDamageBoost(attacker, atk.type);
+      if (boostMult !== 1.0) {
+        result.damage = Math.max(1, Math.round(result.damage * boostMult));
+      }
+    }
+
+    // Apply ward damage reduction (consumable ward items on defender)
+    if (result.damage > 0 && !result.isImmune && atk.damageType && atk.type !== 'heal') {
+      const wardMult = this.fireItemOnHitByType(defender, atk.damageType);
+      if (wardMult !== 1.0) {
+        result.damage = Math.max(1, Math.round(result.damage * wardMult));
+      }
+    }
+
     if (atk.type === 'heal') {
       const healed = Math.min(-result.damage, attacker.maxHp - attacker.currentHp);
       attacker.currentHp += healed;
@@ -982,7 +1091,6 @@ class BattleScene extends Phaser.Scene {
     } else if (atk.type === 'status') {
       this.log.push(`${attacker.name} uses ${atk.name}!`);
     } else if (result.isImmune) {
-      // Immune: no damage, no secondary effects, no spread, no stat effects
       this.log.push(`${attacker.name} uses ${atk.name} → ${defender.name} is immune!`);
       return;
     } else if (targetPlayer) {
@@ -998,6 +1106,11 @@ class BattleScene extends Phaser.Scene {
         this.fireAbilityHooks('onHit', { char: defender, enemy: attacker, player: defenderPlayer });
       }
       this.fireAbilityHooks('onDealDamage', { char: attacker, enemy: defender, player: attackerPlayer });
+
+      // Check Healing Herb trigger (below 50% HP)
+      if (defender.alive && defender.currentHp > 0) {
+        this.fireItemOnHpBelow50(defender, defenderPlayer);
+      }
 
       if (defender.currentHp <= 0) {
         defender.alive = false;
@@ -1084,9 +1197,11 @@ class BattleScene extends Phaser.Scene {
     // Fire turnEnd ability hooks for both active characters
     if (this.p1Active.alive) {
       this.fireAbilityHooks('turnEnd', { char: this.p1Active, enemy: this.p2Active, player: 1 });
+      this.fireItemTurnEnd(this.p1Active, 1);
     }
     if (this.p2Active.alive) {
       this.fireAbilityHooks('turnEnd', { char: this.p2Active, enemy: this.p1Active, player: 2 });
+      this.fireItemTurnEnd(this.p2Active, 2);
     }
 
     // Tick pending multi-turn effects
