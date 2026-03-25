@@ -16,7 +16,8 @@
     "warCry",
     "ironWall",
     "protect",
-    "regenerate"
+    "regenerate",
+    "wish"
   ],
   "abilityPool": [
     "holyShield",

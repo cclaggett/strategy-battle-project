@@ -1,0 +1,11 @@
+{
+  "id": "wish",
+  "name": "Wish",
+  "type": "heal",
+  "power": 50,
+  "delay": 1,
+  "stackable": false,
+  "description": "Powerful heal — restores 50% caster max HP after 1 turn",
+  "priority": 0,
+  "damageType": "holy"
+}

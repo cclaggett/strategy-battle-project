@@ -16,7 +16,8 @@
     "focus",
     "ironWall",
     "protect",
-    "regenerate"
+    "regenerate",
+    "wish"
   ],
   "abilityPool": [
     "divineAura",

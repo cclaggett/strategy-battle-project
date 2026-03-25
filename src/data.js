@@ -132,7 +132,9 @@ function typeEffectiveness(atkDamageType, defenderTypes) {
 function calcDamageResult(attack, attacker, defender) {
   const atk = ATTACKS[attack];
   if (atk.type === 'heal') {
-    return { damage: -Math.round(atk.power * (effectiveStat(attacker, 'mAtk') / 30)), isCrit: false, isImmune: false, typeLabel: '' };
+    // Heal power = percentage of caster's max HP
+    const maxHp = attacker.maxHp || attacker.hp || 100;
+    return { damage: -Math.round(maxHp * atk.power / 100), isCrit: false, isImmune: false, typeLabel: '' };
   }
   if (atk.type === 'status' || atk.type === 'protect') {
     return { damage: 0, isCrit: false, isImmune: false, typeLabel: '' };

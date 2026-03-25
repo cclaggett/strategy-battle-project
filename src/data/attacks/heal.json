@@ -3,7 +3,7 @@
   "name": "Heal",
   "type": "heal",
   "power": 40,
-  "description": "Restores HP",
+  "description": "Restores 40% of caster's max HP",
   "priority": 0,
   "damageType": "holy"
 }

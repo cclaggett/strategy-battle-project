@@ -4,6 +4,7 @@
   "type": "magic",
   "power": 100,
   "delay": 2,
+  "stackable": false,
   "description": "Massive fireball that lands after 2 turns",
   "priority": 0,
   "damageType": "fire",

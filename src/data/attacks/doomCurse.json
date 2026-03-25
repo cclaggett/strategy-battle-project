@@ -4,6 +4,7 @@
   "type": "status",
   "power": 0,
   "delay": 1,
+  "stackable": false,
   "description": "Curses enemy — DEF and RES drop after 1 turn",
   "priority": 0,
   "damageType": "dark",

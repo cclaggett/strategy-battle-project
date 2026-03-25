@@ -3,7 +3,7 @@
   "name": "Prayer",
   "type": "heal",
   "power": 55,
-  "description": "Deep restorative prayer",
+  "description": "Deep prayer restoring 55% of caster's max HP",
   "priority": 0,
   "damageType": "holy"
 }

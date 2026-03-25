@@ -426,7 +426,8 @@ class BattleScene extends Phaser.Scene {
 
       let subLabel = atk.type;
       if (atk.damageType && TYPE_CHART.types[atk.damageType]) subLabel += ` ${TYPE_CHART.types[atk.damageType].emoji}`;
-      if (atk.power > 0) subLabel += ` ${atk.power}`;
+      if (atk.type === 'heal' && atk.power > 0) subLabel += ` ${atk.power}%`;
+      else if (atk.power > 0) subLabel += ` ${atk.power}`;
       if ((atk.priority || 0) > 0) subLabel += ` ⚡+${atk.priority}`;
       if ((atk.priority || 0) < 0) subLabel += ` 🐢${atk.priority}`;
       if (atk.spread) subLabel += ' 🌊';
@@ -741,10 +742,21 @@ class BattleScene extends Phaser.Scene {
     const isDelay = (atk.delay || 0) > 0;
     const isDuration = (atk.duration || 0) > 0;
 
+    // Check stackable — if not stackable and already pending, do nothing
+    if (!atk.stackable) {
+      const alreadyPending = this.pendingEffects.some(e => e.atkKey === atkKey && e.sourcePlayer === attackerPlayer);
+      if (alreadyPending) {
+        this.log.push(`${attacker.name} tries ${atk.name} but it's already active!`);
+        return;
+      }
+    }
+
     // Snapshot caster stats at cast time (for damage calc later)
     const casterSnap = {
       key: attacker.key,
       name: attacker.name,
+      maxHp: attacker.maxHp,
+      hp: attacker.maxHp,
       atk: attacker.atk,
       def: attacker.def,
       mAtk: attacker.mAtk,
@@ -829,7 +841,8 @@ class BattleScene extends Phaser.Scene {
         this.log.push(`${atk.name} fizzles — no valid target!`);
         return;
       }
-      const healAmt = Math.round(atk.power * (effect.casterSnap.mAtk / 30));
+      const casterMaxHp = effect.casterSnap.maxHp || 100;
+      const healAmt = Math.round(casterMaxHp * atk.power / 100);
       const healed = Math.min(healAmt, target.maxHp - target.currentHp);
       if (healed > 0) {
         target.currentHp += healed;

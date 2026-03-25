@@ -1,0 +1,11 @@
+{
+  "id": "arrowBarrage",
+  "name": "Arrow Barrage",
+  "type": "physical",
+  "power": 35,
+  "delay": 1,
+  "stackable": true,
+  "description": "Volley of arrows rains down after 1 turn — can stack!",
+  "priority": 0,
+  "damageType": "ice"
+}
