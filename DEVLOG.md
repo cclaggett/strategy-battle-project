@@ -183,6 +183,42 @@
 **Character Types:**
 Knight ✨, Mage 🔥❄️, Cleric ✨, Rogue 🌑, Warlock 🌑🔥, Paladin ✨⚡, Ranger ❄️, Sorcerer ⚡🌑
 
+## 2026-03-25 — Session with Caleb Claggett
+
+### Multi-Turn Effects System
+- New pending effects engine in BattleScene
+- Two modes: **delay** (fires after N turns) and **duration** (fires each turn for N turns)
+- Can combine both: delay then duration (e.g. delay 1 + duration 3 = starts after 1 turn, lasts 3)
+
+**Design Decisions:**
+1. **Position-based targeting** — effects target a *slot* (active position), not a specific character. If opponent switches, the new character gets hit. Future-proofs for double battles.
+2. **Persists through caster KO** — effects always resolve even if the caster dies. "Already in the air."
+3. **Caster stats snapshotted** — damage/healing calculated using caster's stats at cast time, not current.
+4. **Countdown indicators** — ☄️/💚/🔮 with turn count shown below character sprites on the affected side.
+5. **Stat effects supported** — delayed stat debuffs via `statFx` on the attack definition.
+
+**New JSON Fields on Attacks:**
+- `delay: N` — effect fires after N turns
+- `duration: N` — effect fires each turn for N turns
+- Both can be combined
+
+**UI Updates:**
+- Attack buttons show ⏳N for delay, 🔄N for duration
+- Active pending effects shown as countdown indicators below character sprites
+- Battle log shows cast announcement and resolution with appropriate emoji
+
+**New Attacks:**
+- **Regenerate** — Holy heal, 20 power, duration 3. Heals caster at end of each turn for 3 turns. (Cleric, Paladin)
+- **Meteor Strike** — Fire magic, 100 power, delay 2, spread. Massive hit that lands after 2 turns. (Mage, Sorcerer)
+- **Doom Curse** — Dark status, delay 1. Enemy DEF and RES drop after 1 turn. (Sorcerer, Warlock)
+
+**Character Pool Updates:**
+- Cleric: +Regenerate
+- Paladin: +Regenerate
+- Mage: +Meteor Strike
+- Sorcerer: +Meteor Strike, +Doom Curse
+- Warlock: +Doom Curse
+
 ### Ideas / Future Work
 - Visual upgrades (sprites, animations, effects)
 - More characters and attacks
