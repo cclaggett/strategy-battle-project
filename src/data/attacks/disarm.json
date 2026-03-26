@@ -1,0 +1,8 @@
+{
+  "id": "disarm",
+  "name": "Disarm",
+  "type": "status",
+  "power": 0,
+  "description": "Knocks the opponent's held item away permanently",
+  "priority": 0
+}

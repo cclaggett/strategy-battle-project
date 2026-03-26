@@ -15,7 +15,9 @@
     "arcaneBlast",
     "hex",
     "intimidate",
-    "doomCurse"
+    "doomCurse",
+    "disarm",
+    "itemSwap"
   ],
   "abilityPool": [
     "soulDrain",

@@ -1,0 +1,8 @@
+{
+  "id": "struggle",
+  "name": "Struggle",
+  "type": "physical",
+  "power": 20,
+  "description": "Weak desperate attack — used when no other moves are available",
+  "priority": 0
+}

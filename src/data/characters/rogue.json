@@ -14,11 +14,14 @@
     "hamstring",
     "cleave",
     "quicken",
-    "expose"
+    "expose",
+    "disarm",
+    "itemSwap"
   ],
   "abilityPool": [
     "ambush",
-    "poisonBlade"
+    "poisonBlade",
+    "itemSeal"
   ],
   "types": [
     "dark"

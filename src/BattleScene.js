@@ -35,7 +35,7 @@ class BattleScene extends Phaser.Scene {
 
   makeChar(key, attacks, ability, bonuses, item) {
     const t = ROSTER[key];
-    const char = { key, ...t, attacks, ability: ability || null, item: item || null, itemConsumed: false, maxHp: t.hp, currentHp: t.hp, alive: true };
+    const char = { key, ...t, attacks, ability: ability || null, item: item || null, itemConsumed: false, itemSealed: false, maxHp: t.hp, currentHp: t.hp, alive: true };
     if (bonuses) {
       ALLOCATABLE_STATS.forEach(s => { char[s] += (bonuses[s] || 0); });
     }
@@ -74,6 +74,13 @@ class BattleScene extends Phaser.Scene {
           target.currentHp += healed;
           this.log.push(`${target.name} heals ${healed} HP!`);
         }
+      } else if (fx.type === 'sealItems') {
+        const target = fx.target === 'self' ? char : enemy;
+        if (!target || !target.alive) continue;
+        if (!target.itemSealed) {
+          target.itemSealed = true;
+          this.log.push(`${target.name}'s consumable items are sealed!`);
+        }
       } else if (fx.type === 'playerHeal') {
         const prop = player === 1 ? 'p1PlayerHp' : 'p2PlayerHp';
         if (this[prop] < MAX_PLAYER_HP) {
@@ -86,9 +93,13 @@ class BattleScene extends Phaser.Scene {
 
   // ── Item Hook System ─────────────────────────────────────────
   // Returns true if item was consumed/activated
-  getCharItem(char) {
+  getCharItem(char, ignoreSealed) {
     if (!char || !char.item || char.itemConsumed) return null;
-    return ITEMS[char.item] || null;
+    const item = ITEMS[char.item] || null;
+    if (!item) return null;
+    // Sealed characters can't use consumable items (but passive items still work)
+    if (!ignoreSealed && char.itemSealed && item.consumable) return null;
+    return item;
   }
 
   fireItemTurnEnd(char, player) {
@@ -295,10 +306,22 @@ class BattleScene extends Phaser.Scene {
 
     const p1AbilityStr = p1.ability && ABILITIES[p1.ability] ? `\n✦ ${ABILITIES[p1.ability].name}` : '';
     const p2AbilityStr = p2.ability && ABILITIES[p2.ability] ? `\n✦ ${ABILITIES[p2.ability].name}` : '';
-    const p1ItemObj = this.getCharItem(p1);
-    const p2ItemObj = this.getCharItem(p2);
-    const p1ItemStr = p1ItemObj ? `\n${p1ItemObj.emoji} ${p1ItemObj.name}` : (p1.item && p1.itemConsumed ? `\n(item used)` : '');
-    const p2ItemStr = p2ItemObj ? `\n${p2ItemObj.emoji} ${p2ItemObj.name}` : (p2.item && p2.itemConsumed ? `\n(item used)` : '');
+    const p1ItemObj = this.getCharItem(p1, true); // ignoreSealed for display
+    const p2ItemObj = this.getCharItem(p2, true);
+    let p1ItemStr = '';
+    if (p1ItemObj) {
+      p1ItemStr = `\n${p1ItemObj.emoji} ${p1ItemObj.name}`;
+      if (p1.itemSealed && p1ItemObj.consumable) p1ItemStr += ' 🔒';
+    } else if (p1.item && p1.itemConsumed) {
+      p1ItemStr = '\n(item used)';
+    }
+    let p2ItemStr = '';
+    if (p2ItemObj) {
+      p2ItemStr = `\n${p2ItemObj.emoji} ${p2ItemObj.name}`;
+      if (p2.itemSealed && p2ItemObj.consumable) p2ItemStr += ' 🔒';
+    } else if (p2.item && p2.itemConsumed) {
+      p2ItemStr = '\n(item used)';
+    }
     this.p1StatsText.setText(
       `${this.formatStat(p1, 'atk', 'ATK')}  ${this.formatStat(p1, 'def', 'DEF')}\n` +
       `${this.formatStat(p1, 'mAtk', 'MAG')}  ${this.formatStat(p1, 'mDef', 'RES')}\n` +
@@ -499,13 +522,23 @@ class BattleScene extends Phaser.Scene {
     // Check item attack restrictions (e.g. War Belt = physical only)
     const allowedTypes = this.getItemAttackRestriction(active);
 
-    const atkCount = active.attacks.length;
+    // Determine available attacks — if all are restricted, add Struggle as fallback
+    let attackList = [...active.attacks];
+    const hasUsableAttack = attackList.some(atkKey => {
+      const atk = ATTACKS[atkKey];
+      return !allowedTypes || allowedTypes.includes(atk.type);
+    });
+    if (!hasUsableAttack && ATTACKS['struggle']) {
+      attackList = ['struggle'];
+    }
+
+    const atkCount = attackList.length;
     const canSwitch = team.some((c, i) => c.alive && i !== activeIdx);
     const totalButtons = atkCount + (canSwitch ? 1 : 0);
     const spacing = Math.min(150, (W - 40) / totalButtons);
     const startX = W / 2 - (totalButtons - 1) * spacing / 2;
 
-    active.attacks.forEach((atkKey, i) => {
+    attackList.forEach((atkKey, i) => {
       const atk = ATTACKS[atkKey];
       const restricted = allowedTypes && !allowedTypes.includes(atk.type);
       const bx = startX + i * spacing;
@@ -1090,6 +1123,32 @@ class BattleScene extends Phaser.Scene {
       this.log.push(`${attacker.name} heals for ${healed} HP!`);
     } else if (atk.type === 'status') {
       this.log.push(`${attacker.name} uses ${atk.name}!`);
+
+      // Special status moves: item interaction
+      if (atkKey === 'disarm') {
+        if (defender.item && !defender.itemConsumed) {
+          const removedItem = ITEMS[defender.item];
+          const itemName = removedItem ? removedItem.name : defender.item;
+          defender.item = null;
+          defender.itemConsumed = false;
+          this.log.push(`${defender.name}'s ${itemName} was knocked away!`);
+        } else {
+          this.log.push(`${defender.name} has no item to disarm!`);
+        }
+      } else if (atkKey === 'itemSwap') {
+        const aItem = attacker.item;
+        const aConsumed = attacker.itemConsumed;
+        const aSealed = attacker.itemSealed;
+        attacker.item = defender.item;
+        attacker.itemConsumed = defender.itemConsumed;
+        attacker.itemSealed = defender.itemSealed;
+        defender.item = aItem;
+        defender.itemConsumed = aConsumed;
+        defender.itemSealed = aSealed;
+        const aName = attacker.item && ITEMS[attacker.item] ? ITEMS[attacker.item].name : 'nothing';
+        const dName = defender.item && ITEMS[defender.item] ? ITEMS[defender.item].name : 'nothing';
+        this.log.push(`Items swapped! ${attacker.name} now holds ${aName}, ${defender.name} now holds ${dName}`);
+      }
     } else if (result.isImmune) {
       this.log.push(`${attacker.name} uses ${atk.name} → ${defender.name} is immune!`);
       return;

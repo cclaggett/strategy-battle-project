@@ -1,0 +1,8 @@
+{
+  "id": "itemSwap",
+  "name": "Trick",
+  "type": "status",
+  "power": 0,
+  "description": "Swaps your held item with the opponent's",
+  "priority": 0
+}

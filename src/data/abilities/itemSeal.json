@@ -1,0 +1,7 @@
+{
+  "id": "itemSeal",
+  "name": "Item Seal",
+  "trigger": "onEntry",
+  "description": "On entry, prevents the enemy from using consumable items",
+  "effects": [{ "type": "sealItems", "target": "enemy" }]
+}
