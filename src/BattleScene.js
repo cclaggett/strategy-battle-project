@@ -1270,7 +1270,7 @@ class BattleScene extends Phaser.Scene {
 
       this.promptText.setText(`${winner} wins! (${reason.join(', ')})\nClick to play again.`);
       this.refreshUI();
-      this.input.once('pointerdown', () => this.scene.start('TeamBuilderScene'));
+      this.input.once('pointerdown', () => this.scene.start('BattlePrepScene'));
       return;
     }
 
@@ -1312,7 +1312,7 @@ class BattleScene extends Phaser.Scene {
       else winner = 'Player 2';
       this.phase = 'gameover';
       this.promptText.setText(`${winner} wins!\nClick to play again.`);
-      this.input.once('pointerdown', () => this.scene.start('TeamBuilderScene'));
+      this.input.once('pointerdown', () => this.scene.start('BattlePrepScene'));
       return;
     }
 
