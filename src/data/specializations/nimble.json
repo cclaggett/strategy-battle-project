@@ -1,0 +1,8 @@
+{
+  "id": "nimble",
+  "name": "Nimble",
+  "description": "+15% Speed, -15% Resistance",
+  "emoji": "💨",
+  "boost": { "stat": "spd", "multiplier": 1.15 },
+  "penalty": { "stat": "mDef", "multiplier": 0.85 }
+}

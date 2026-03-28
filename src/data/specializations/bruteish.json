@@ -1,0 +1,8 @@
+{
+  "id": "bruteish",
+  "name": "Bruteish",
+  "description": "+15% Attack, -15% Magic",
+  "emoji": "💪",
+  "boost": { "stat": "atk", "multiplier": 1.15 },
+  "penalty": { "stat": "mAtk", "multiplier": 0.85 }
+}

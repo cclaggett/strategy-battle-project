@@ -6,7 +6,7 @@ class TeamBuilderScene extends Phaser.Scene {
 
   init() {
     this.currentPlayer = 1;
-    this.step = 'pickChar';   // 'pickChar' | 'pickAttacks' | 'pickAbility' | 'pickItem' | 'allocStats' | 'pickPlayerActions'
+    this.step = 'pickChar';   // 'pickChar' | 'pickAttacks' | 'pickAbility' | 'pickItem' | 'pickSpecialization' | 'allocStats' | 'pickPlayerActions'
     this.p1Picks = [];
     this.p2Picks = [];
     this.p1PlayerActions = [];
@@ -15,6 +15,7 @@ class TeamBuilderScene extends Phaser.Scene {
     this.selectedAttacks = [];
     this.selectedAbility = null;
     this.selectedItem = null;
+    this.selectedSpecialization = null;
     this.selectedPlayerActions = [];
     this.statAlloc = {};
     this.usedKeys = new Set();
@@ -155,6 +156,7 @@ class TeamBuilderScene extends Phaser.Scene {
       attacks: [...c.attacks],
       ability: c.ability || null,
       item: c.item || null,
+      specialization: c.specialization || null,
       bonuses: { ...c.bonuses },
     }));
 
@@ -199,11 +201,12 @@ class TeamBuilderScene extends Phaser.Scene {
       const atkNames = p.attacks.map(a => ATTACKS[a].name).join(', ');
       const abilityName = p.ability && ABILITIES[p.ability] ? ` | ${ABILITIES[p.ability].name}` : '';
       const itemName = p.item && ITEMS[p.item] ? ` ${ITEMS[p.item].emoji}${ITEMS[p.item].name}` : '';
+      const specName = p.specialization && SPECIALIZATIONS[p.specialization] ? ` [${SPECIALIZATIONS[p.specialization].emoji}${SPECIALIZATIONS[p.specialization].name}]` : '';
       const bonusStr = ALLOCATABLE_STATS
         .filter(s => p.bonuses[s] > 0)
         .map(s => `${STAT_LABELS[s]}+${p.bonuses[s]}`)
         .join(' ');
-      return `${char.name}: ${atkNames}${abilityName}${itemName}${bonusStr ? '  [' + bonusStr + ']' : ''}`;
+      return `${char.name}: ${atkNames}${abilityName}${itemName}${specName}${bonusStr ? '  [' + bonusStr + ']' : ''}`;
     });
 
     const playerActions = this.currentPlayer === 1 ? this.p1PlayerActions : this.p2PlayerActions;
@@ -584,8 +587,73 @@ class TeamBuilderScene extends Phaser.Scene {
 
     // Confirm with item
     const hasSelection = this.selectedItem !== null;
-    const confirmLabel = hasSelection ? '✓ Pick Stats →' : 'Skip (no item) →';
-    const confirmBg = this.add.rectangle(W / 2, H - 60, 240, 40, 0x166534).setStrokeStyle(2, 0x4ade80).setInteractive({ useHandCursor: true });
+    const confirmLabel = hasSelection ? '✓ Pick Specialization →' : 'Skip (no item) →';
+    const confirmBg = this.add.rectangle(W / 2, H - 60, 280, 40, 0x166534).setStrokeStyle(2, 0x4ade80).setInteractive({ useHandCursor: true });
+    const confirmTxt = this.add.text(W / 2, H - 60, confirmLabel, { fontSize: '16px', fill: '#4ade80', fontFamily: 'monospace' }).setOrigin(0.5);
+    confirmBg.on('pointerover', () => confirmBg.setFillStyle(0x22c55e));
+    confirmBg.on('pointerout', () => confirmBg.setFillStyle(0x166534));
+    confirmBg.on('pointerdown', () => {
+      this.selectedSpecialization = null;
+      this.showSpecializationSelect();
+    });
+    this.buttons.push(confirmBg, confirmTxt);
+
+    const backBg = this.add.rectangle(80, H - 60, 120, 36, 0x333333).setStrokeStyle(1, 0x555555).setInteractive({ useHandCursor: true });
+    const backTxt = this.add.text(80, H - 60, '← Back', { fontSize: '13px', fill: '#aaa', fontFamily: 'monospace' }).setOrigin(0.5);
+    backBg.on('pointerdown', () => this.showAbilitySelect());
+    this.buttons.push(backBg, backTxt);
+
+    this.infoText.setText('Multiple characters can hold the same item.');
+  }
+
+  // ── Specialization Select ───────────────────────────────────────
+  showSpecializationSelect() {
+    this.clearButtons();
+    this.step = 'pickSpecialization';
+    const W = this.scale.width;
+    const H = this.scale.height;
+    const char = ROSTER[this.currentCharKey];
+    const accent = this.currentPlayer === 1 ? '#53a8b6' : '#e94560';
+    const specKeys = Object.keys(SPECIALIZATIONS);
+
+    this.titleText.setText(`Player ${this.currentPlayer} — ${char.name} Specialization`);
+    this.subtitleText.setText('Pick a specialization (15% stat trade-off) or skip');
+
+    const startY = 100;
+    const rowH = 56;
+
+    specKeys.forEach((key, i) => {
+      const spec = SPECIALIZATIONS[key];
+      const by = startY + i * rowH;
+      const isSelected = this.selectedSpecialization === key;
+
+      const bg = this.add.rectangle(W / 2, by, W * 0.8, 46, isSelected ? 0x166534 : 0x222244)
+        .setStrokeStyle(2, isSelected ? 0x4ade80 : 0x444466)
+        .setInteractive({ useHandCursor: true });
+
+      const label = `${spec.emoji} ${spec.name}`;
+      const txt = this.add.text(W * 0.18, by, label, {
+        fontSize: '16px', fill: isSelected ? '#4ade80' : '#fff', fontFamily: 'monospace'
+      }).setOrigin(0, 0.5);
+
+      const desc = this.add.text(W * 0.55, by, spec.description, {
+        fontSize: '12px', fill: '#aaa', fontFamily: 'monospace'
+      }).setOrigin(0, 0.5);
+
+      bg.on('pointerover', () => { if (!isSelected) bg.setFillStyle(0x333355); });
+      bg.on('pointerout', () => { if (!isSelected) bg.setFillStyle(0x222244); });
+      bg.on('pointerdown', () => {
+        this.selectedSpecialization = (this.selectedSpecialization === key) ? null : key;
+        this.showSpecializationSelect();
+      });
+
+      this.buttons.push(bg, txt, desc);
+    });
+
+    // Confirm button
+    const hasSpec = this.selectedSpecialization !== null;
+    const confirmLabel = hasSpec ? '✓ Pick Stats →' : 'Skip (no specialization) →';
+    const confirmBg = this.add.rectangle(W / 2, H - 60, 300, 40, 0x166534).setStrokeStyle(2, 0x4ade80).setInteractive({ useHandCursor: true });
     const confirmTxt = this.add.text(W / 2, H - 60, confirmLabel, { fontSize: '16px', fill: '#4ade80', fontFamily: 'monospace' }).setOrigin(0.5);
     confirmBg.on('pointerover', () => confirmBg.setFillStyle(0x22c55e));
     confirmBg.on('pointerout', () => confirmBg.setFillStyle(0x166534));
@@ -596,12 +664,13 @@ class TeamBuilderScene extends Phaser.Scene {
     });
     this.buttons.push(confirmBg, confirmTxt);
 
+    // Back button
     const backBg = this.add.rectangle(80, H - 60, 120, 36, 0x333333).setStrokeStyle(1, 0x555555).setInteractive({ useHandCursor: true });
     const backTxt = this.add.text(80, H - 60, '← Back', { fontSize: '13px', fill: '#aaa', fontFamily: 'monospace' }).setOrigin(0.5);
-    backBg.on('pointerdown', () => this.showAbilitySelect());
+    backBg.on('pointerdown', () => this.showItemSelect());
     this.buttons.push(backBg, backTxt);
 
-    this.infoText.setText('Multiple characters can hold the same item.');
+    this.infoText.setText('Specializations apply a 15% multiplier after skill investment.');
   }
 
   // ── Stat Allocation ────────────────────────────────────────────
@@ -669,7 +738,7 @@ class TeamBuilderScene extends Phaser.Scene {
 
     const backBg = this.add.rectangle(80, H - 60, 120, 36, 0x333333).setStrokeStyle(1, 0x555555).setInteractive({ useHandCursor: true });
     const backTxt = this.add.text(80, H - 60, '← Back', { fontSize: '13px', fill: '#aaa', fontFamily: 'monospace' }).setOrigin(0.5);
-    backBg.on('pointerdown', () => this.showAttackSelect());
+    backBg.on('pointerdown', () => this.showSpecializationSelect());
     this.buttons.push(backBg, backTxt);
 
     this.infoText.setText('');
@@ -682,6 +751,7 @@ class TeamBuilderScene extends Phaser.Scene {
       attacks: [...this.selectedAttacks],
       ability: this.selectedAbility,
       item: this.selectedItem,
+      specialization: this.selectedSpecialization,
       bonuses: { ...this.statAlloc },
     });
     this.usedKeys.add(this.currentCharKey);

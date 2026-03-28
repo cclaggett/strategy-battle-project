@@ -5,8 +5,8 @@ class BattleScene extends Phaser.Scene {
   }
 
   init(data) {
-    this.p1Team = data.p1Picks.map(p => this.makeChar(p.key, p.attacks, p.ability, p.bonuses, p.item));
-    this.p2Team = data.p2Picks.map(p => this.makeChar(p.key, p.attacks, p.ability, p.bonuses, p.item));
+    this.p1Team = data.p1Picks.map(p => this.makeChar(p.key, p.attacks, p.ability, p.bonuses, p.item, p.specialization));
+    this.p2Team = data.p2Picks.map(p => this.makeChar(p.key, p.attacks, p.ability, p.bonuses, p.item, p.specialization));
     this.p1Index = 0;
     this.p2Index = 0;
     this.p1Choice = null;
@@ -33,11 +33,31 @@ class BattleScene extends Phaser.Scene {
     this.nextPendingId = 1;
   }
 
-  makeChar(key, attacks, ability, bonuses, item) {
+  makeChar(key, attacks, ability, bonuses, item, specialization) {
     const t = ROSTER[key];
-    const char = { key, ...t, attacks, ability: ability || null, item: item || null, itemConsumed: false, itemSealed: false, maxHp: t.hp, currentHp: t.hp, alive: true };
+    const char = { key, ...t, attacks, ability: ability || null, item: item || null, itemConsumed: false, itemSealed: false, specialization: specialization || null, maxHp: t.hp, currentHp: t.hp, alive: true };
     if (bonuses) {
       ALLOCATABLE_STATS.forEach(s => { char[s] += (bonuses[s] || 0); });
+    }
+    // Apply specialization multipliers after skill investment
+    if (specialization && SPECIALIZATIONS[specialization]) {
+      const spec = SPECIALIZATIONS[specialization];
+      const boostStat = spec.boost.stat;
+      const penaltyStat = spec.penalty.stat;
+      if (boostStat === 'hp') {
+        char.hp = Math.round(char.hp * spec.boost.multiplier);
+        char.maxHp = char.hp;
+        char.currentHp = char.hp;
+      } else {
+        char[boostStat] = Math.round(char[boostStat] * spec.boost.multiplier);
+      }
+      if (penaltyStat === 'hp') {
+        char.hp = Math.round(char.hp * spec.penalty.multiplier);
+        char.maxHp = char.hp;
+        char.currentHp = char.hp;
+      } else {
+        char[penaltyStat] = Math.round(char[penaltyStat] * spec.penalty.multiplier);
+      }
     }
     char.stages = { atk: 0, def: 0, mAtk: 0, mDef: 0, spd: 0 };
     return char;
@@ -306,6 +326,8 @@ class BattleScene extends Phaser.Scene {
 
     const p1AbilityStr = p1.ability && ABILITIES[p1.ability] ? `\n✦ ${ABILITIES[p1.ability].name}` : '';
     const p2AbilityStr = p2.ability && ABILITIES[p2.ability] ? `\n✦ ${ABILITIES[p2.ability].name}` : '';
+    const p1SpecStr = p1.specialization && SPECIALIZATIONS[p1.specialization] ? `\n${SPECIALIZATIONS[p1.specialization].emoji} ${SPECIALIZATIONS[p1.specialization].name}` : '';
+    const p2SpecStr = p2.specialization && SPECIALIZATIONS[p2.specialization] ? `\n${SPECIALIZATIONS[p2.specialization].emoji} ${SPECIALIZATIONS[p2.specialization].name}` : '';
     const p1ItemObj = this.getCharItem(p1, true); // ignoreSealed for display
     const p2ItemObj = this.getCharItem(p2, true);
     let p1ItemStr = '';
@@ -325,12 +347,12 @@ class BattleScene extends Phaser.Scene {
     this.p1StatsText.setText(
       `${this.formatStat(p1, 'atk', 'ATK')}  ${this.formatStat(p1, 'def', 'DEF')}\n` +
       `${this.formatStat(p1, 'mAtk', 'MAG')}  ${this.formatStat(p1, 'mDef', 'RES')}\n` +
-      `${this.formatStat(p1, 'spd', 'SPD')}` + p1AbilityStr + p1ItemStr
+      `${this.formatStat(p1, 'spd', 'SPD')}` + p1AbilityStr + p1ItemStr + p1SpecStr
     );
     this.p2StatsText.setText(
       `${this.formatStat(p2, 'atk', 'ATK')}  ${this.formatStat(p2, 'def', 'DEF')}\n` +
       `${this.formatStat(p2, 'mAtk', 'MAG')}  ${this.formatStat(p2, 'mDef', 'RES')}\n` +
-      `${this.formatStat(p2, 'spd', 'SPD')}` + p2AbilityStr + p2ItemStr
+      `${this.formatStat(p2, 'spd', 'SPD')}` + p2AbilityStr + p2ItemStr + p2SpecStr
     );
 
     this.p1Team.forEach((c, i) => this.p1Dots[i].setFillStyle(c.alive ? 0x53a8b6 : 0x333333));

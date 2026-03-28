@@ -1,0 +1,8 @@
+{
+  "id": "chaotic",
+  "name": "Chaotic",
+  "description": "+15% Magic, -15% Defense",
+  "emoji": "🌀",
+  "boost": { "stat": "mAtk", "multiplier": 1.15 },
+  "penalty": { "stat": "def", "multiplier": 0.85 }
+}
