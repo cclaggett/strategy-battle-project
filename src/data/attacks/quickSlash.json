@@ -3,6 +3,6 @@
   "name": "Quick Slash",
   "type": "physical",
   "power": 25,
-  "description": "Lightning-fast cut",
+  "description": "A lightning-fast cut. High priority (+1) — strikes before normal moves.",
   "priority": 1
 }

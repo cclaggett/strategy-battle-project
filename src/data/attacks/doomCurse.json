@@ -5,7 +5,7 @@
   "power": 0,
   "delay": 1,
   "stackable": false,
-  "description": "Curses enemy — DEF and RES drop after 1 turn",
+  "description": "Dark-type status. Delayed 1 turn. Lowers enemy DEF and RES by 1 stage each. Cannot stack.",
   "priority": 0,
   "damageType": "dark",
   "statFx": [

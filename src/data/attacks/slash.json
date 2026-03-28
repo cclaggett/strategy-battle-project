@@ -3,6 +3,6 @@
   "name": "Slash",
   "type": "physical",
   "power": 40,
-  "description": "A swift blade strike",
+  "description": "A reliable blade strike. No frills, no drawbacks.",
   "priority": 0
 }

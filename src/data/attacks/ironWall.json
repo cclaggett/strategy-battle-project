@@ -3,13 +3,9 @@
   "name": "Iron Wall",
   "type": "status",
   "power": 0,
-  "description": "Boost own DEF",
+  "description": "Raises own DEF by 1 stage. Stacks up to +3 to wall off physical attacks.",
   "statFx": [
-    {
-      "target": "self",
-      "stat": "def",
-      "stages": 1
-    }
+    { "target": "self", "stat": "def", "stages": 1 }
   ],
   "priority": 0
 }

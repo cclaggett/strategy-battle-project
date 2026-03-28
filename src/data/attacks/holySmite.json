@@ -3,7 +3,7 @@
   "name": "Holy Smite",
   "type": "magic",
   "power": 55,
-  "description": "Radiant divine strike",
+  "description": "Holy-type magic. Long-range — can target the enemy character or deal 1 player HP directly.",
   "range": "long",
   "priority": 0,
   "damageType": "holy"

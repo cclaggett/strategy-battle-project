@@ -5,7 +5,7 @@
   "power": 50,
   "delay": 1,
   "stackable": false,
-  "description": "Powerful heal — restores 50% caster max HP after 1 turn",
+  "description": "Holy-type heal. Delayed 1 turn. Restores 50% of caster's max HP when it lands. Cannot stack.",
   "priority": 0,
   "damageType": "holy"
 }

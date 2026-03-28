@@ -3,7 +3,7 @@
   "name": "Thunder",
   "type": "magic",
   "power": 60,
-  "description": "Calls down lightning",
+  "description": "Lightning-type magic. Spread — hits the enemy character AND deals 1 player HP damage.",
   "spread": true,
   "priority": 0,
   "damageType": "lightning"

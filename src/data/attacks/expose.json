@@ -3,13 +3,9 @@
   "name": "Expose",
   "type": "status",
   "power": 0,
-  "description": "Lower enemy DEF",
+  "description": "Lowers enemy DEF by 1 stage. Makes them vulnerable to physical attacks.",
   "statFx": [
-    {
-      "target": "enemy",
-      "stat": "def",
-      "stages": -1
-    }
+    { "target": "enemy", "stat": "def", "stages": -1 }
   ],
   "priority": 0
 }

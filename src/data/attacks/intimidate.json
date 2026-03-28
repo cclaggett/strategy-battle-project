@@ -3,13 +3,9 @@
   "name": "Intimidate",
   "type": "status",
   "power": 0,
-  "description": "Lower enemy ATK",
+  "description": "Lowers enemy ATK by 1 stage. Weakens their physical damage output.",
   "statFx": [
-    {
-      "target": "enemy",
-      "stat": "atk",
-      "stages": -1
-    }
+    { "target": "enemy", "stat": "atk", "stages": -1 }
   ],
   "priority": 0
 }

@@ -3,6 +3,6 @@
   "name": "Heavy Strike",
   "type": "physical",
   "power": 65,
-  "description": "Slow but powerful blow",
+  "description": "A devastating overhead blow. Low priority (-1) — always strikes last in its bracket.",
   "priority": -1
 }

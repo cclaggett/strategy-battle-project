@@ -5,7 +5,7 @@
   "power": 35,
   "delay": 1,
   "stackable": true,
-  "description": "Volley of arrows rains down after 1 turn — can stack!",
+  "description": "Ice-type physical. Delayed 1 turn. Volley of arrows rains down — can stack multiple barrages!",
   "priority": 0,
   "damageType": "ice"
 }

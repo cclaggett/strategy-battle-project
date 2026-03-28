@@ -3,7 +3,7 @@
   "name": "Arcane Blast",
   "type": "magic",
   "power": 65,
-  "description": "Raw magical force",
+  "description": "Pure magical force. Long-range — can target the enemy character or deal 1 player HP directly.",
   "range": "long",
   "priority": 0
 }

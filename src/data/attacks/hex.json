@@ -3,13 +3,9 @@
   "name": "Hex",
   "type": "status",
   "power": 0,
-  "description": "Lower enemy MAG",
+  "description": "Dark-type status. Lowers enemy MAG by 1 stage, weakening their magic attacks.",
   "statFx": [
-    {
-      "target": "enemy",
-      "stat": "mAtk",
-      "stages": -1
-    }
+    { "target": "enemy", "stat": "mAtk", "stages": -1 }
   ],
   "priority": 0,
   "damageType": "dark"

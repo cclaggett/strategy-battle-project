@@ -3,13 +3,9 @@
   "name": "Shield Bash",
   "type": "physical",
   "power": 30,
-  "description": "Shield slam",
+  "description": "Slams the enemy with a shield. Lowers enemy SPD by 1 stage.",
   "statFx": [
-    {
-      "target": "enemy",
-      "stat": "spd",
-      "stages": -1
-    }
+    { "target": "enemy", "stat": "spd", "stages": -1 }
   ],
   "priority": 0
 }

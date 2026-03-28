@@ -3,6 +3,6 @@
   "name": "Protect",
   "type": "protect",
   "power": 0,
-  "description": "Shield yourself and your player from harm",
+  "description": "High priority (+2). Shields your character and absorbs 1 incoming player HP damage this turn.",
   "priority": 2
 }

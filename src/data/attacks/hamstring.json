@@ -3,13 +3,9 @@
   "name": "Hamstring",
   "type": "physical",
   "power": 35,
-  "description": "Crippling leg strike",
+  "description": "Crippling leg strike. Deals damage and lowers enemy SPD by 1 stage.",
   "statFx": [
-    {
-      "target": "enemy",
-      "stat": "spd",
-      "stages": -1
-    }
+    { "target": "enemy", "stat": "spd", "stages": -1 }
   ],
   "priority": 0
 }

@@ -3,13 +3,9 @@
   "name": "Focus",
   "type": "status",
   "power": 0,
-  "description": "Boost own RES",
+  "description": "Raises own RES by 1 stage. Stacks up to +3 to resist magic damage.",
   "statFx": [
-    {
-      "target": "self",
-      "stat": "mDef",
-      "stages": 1
-    }
+    { "target": "self", "stat": "mDef", "stages": 1 }
   ],
   "priority": 0
 }

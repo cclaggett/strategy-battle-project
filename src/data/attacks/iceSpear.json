@@ -3,7 +3,7 @@
   "name": "Ice Spear",
   "type": "magic",
   "power": 50,
-  "description": "Piercing shard of ice",
+  "description": "Ice-type magic. Long-range — can target the enemy character or deal 1 player HP directly.",
   "range": "long",
   "priority": 0,
   "damageType": "ice"

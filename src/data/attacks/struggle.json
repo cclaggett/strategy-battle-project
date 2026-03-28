@@ -3,6 +3,6 @@
   "name": "Struggle",
   "type": "physical",
   "power": 20,
-  "description": "Weak desperate attack — used when no other moves are available",
+  "description": "Weak desperate attack. Only used when all other moves are restricted by your held item.",
   "priority": 0
 }

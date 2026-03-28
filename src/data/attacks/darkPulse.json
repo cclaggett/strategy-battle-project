@@ -3,13 +3,9 @@
   "name": "Dark Pulse",
   "type": "magic",
   "power": 45,
-  "description": "Shadow energy",
+  "description": "Dark-type magic. Deals damage and lowers enemy RES by 1 stage.",
   "statFx": [
-    {
-      "target": "enemy",
-      "stat": "mDef",
-      "stages": -1
-    }
+    { "target": "enemy", "stat": "mDef", "stages": -1 }
   ],
   "priority": 0,
   "damageType": "dark"

@@ -5,7 +5,7 @@
   "power": 15,
   "duration": 3,
   "stackable": false,
-  "description": "Heals 15% caster max HP each turn for 3 turns",
+  "description": "Holy-type heal over time. Restores 15% of caster's max HP each turn for 3 turns. Cannot stack with itself.",
   "priority": 0,
   "damageType": "holy"
 }

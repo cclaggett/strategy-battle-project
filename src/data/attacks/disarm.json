@@ -3,6 +3,6 @@
   "name": "Disarm",
   "type": "status",
   "power": 0,
-  "description": "Knocks the opponent's held item away permanently",
+  "description": "Knocks the opponent's held item away permanently. No effect if they have no item.",
   "priority": 0
 }
