@@ -268,9 +268,11 @@ class BattleScene extends Phaser.Scene {
     // Team dots
     this.p1Dots = [];
     this.p2Dots = [];
-    for (let i = 0; i < 3; i++) {
-      this.p1Dots.push(this.add.circle(BW * 0.18 + i * 20, H * 0.22, 5, 0x53a8b6));
-      this.p2Dots.push(this.add.circle(BW * 0.68 + i * 20, H * 0.22, 5, 0xe94560));
+    for (let i = 0; i < this.p1Team.length; i++) {
+      this.p1Dots.push(this.add.circle(BW * 0.18 + i * 16, H * 0.22, 4, 0x53a8b6));
+    }
+    for (let i = 0; i < this.p2Team.length; i++) {
+      this.p2Dots.push(this.add.circle(BW * 0.68 + i * 16, H * 0.22, 4, 0xe94560));
     }
 
     // Action buttons area

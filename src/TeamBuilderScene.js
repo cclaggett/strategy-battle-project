@@ -18,7 +18,6 @@ class TeamBuilderScene extends Phaser.Scene {
     this.selectedSpecialization = null;
     this.selectedPlayerActions = [];
     this.statAlloc = {};
-    this.usedKeys = new Set();
     this.buttons = [];
     this.playerActionsDrafted = { 1: false, 2: false };
   }
@@ -142,14 +141,6 @@ class TeamBuilderScene extends Phaser.Scene {
       if (pa !== 'none' && !PLAYER_ACTIONS[pa]) { alert(`Player action "${pa}" no longer exists. Cannot load.`); return; }
     }
 
-    // Check characters aren't already taken by the other player
-    const conflicting = team.characters.filter(c => this.usedKeys.has(c.key));
-    if (conflicting.length > 0) {
-      const names = conflicting.map(c => ROSTER[c.key].name).join(', ');
-      alert(`${names} already picked by the other player. Cannot load.`);
-      return;
-    }
-
     // Apply the team
     const picks = team.characters.map(c => ({
       key: c.key,
@@ -168,7 +159,6 @@ class TeamBuilderScene extends Phaser.Scene {
       this.p2PlayerActions = [...team.playerActions];
     }
 
-    picks.forEach(p => this.usedKeys.add(p.key));
     this.playerActionsDrafted[this.currentPlayer] = true;
 
     // Advance
@@ -350,10 +340,11 @@ class TeamBuilderScene extends Phaser.Scene {
     const picked = this.currentPicks.length;
     const accent = this.currentPlayer === 1 ? '#53a8b6' : '#e94560';
 
-    this.titleText.setText(`Player ${this.currentPlayer} — Pick Character ${picked + 1} of 3`);
+    this.titleText.setText(`Player ${this.currentPlayer} — Pick Character ${picked + 1} of ${TEAM_SIZE}`);
     this.subtitleText.setText('Choose a character for your team');
 
-    const keys = Object.keys(ROSTER).filter(k => !this.usedKeys.has(k));
+    const currentTeamKeys = new Set(this.currentPicks.map(p => p.key));
+    const keys = Object.keys(ROSTER).filter(k => !currentTeamKeys.has(k));
     const cols = Math.min(keys.length, 4);
     const startX = W / 2 - (cols - 1) * 95;
 
@@ -397,7 +388,7 @@ class TeamBuilderScene extends Phaser.Scene {
     const accent = this.currentPlayer === 1 ? '#53a8b6' : '#e94560';
 
     this.titleText.setText(`Player ${this.currentPlayer} — Attacks for ${char.name}`);
-    this.subtitleText.setText(`Pick 3 attacks (${this.selectedAttacks.length}/3 selected)`);
+    this.subtitleText.setText(`Pick ${ATTACK_SLOTS} attacks (${this.selectedAttacks.length}/${ATTACK_SLOTS} selected)`);
 
     const statsSummary = this.add.text(W / 2, 80, `HP ${char.hp}  ATK ${char.atk}  DEF ${char.def}  MAG ${char.mAtk}  RES ${char.mDef}  SPD ${char.spd}`, {
       fontSize: '11px', fill: '#888', fontFamily: 'monospace'
@@ -436,7 +427,7 @@ class TeamBuilderScene extends Phaser.Scene {
       bg.on('pointerdown', () => {
         if (isSelected) {
           this.selectedAttacks = this.selectedAttacks.filter(a => a !== atkKey);
-        } else if (this.selectedAttacks.length < 3) {
+        } else if (this.selectedAttacks.length < ATTACK_SLOTS) {
           this.selectedAttacks.push(atkKey);
         }
         this.showAttackSelect();
@@ -445,7 +436,7 @@ class TeamBuilderScene extends Phaser.Scene {
       this.buttons.push(bg, txt);
     });
 
-    if (this.selectedAttacks.length === 3) {
+    if (this.selectedAttacks.length === ATTACK_SLOTS) {
       const confirmBg = this.add.rectangle(W / 2, H - 70, 200, 40, 0x166534).setStrokeStyle(2, 0x4ade80).setInteractive({ useHandCursor: true });
       const confirmTxt = this.add.text(W / 2, H - 70, '✓ Pick Stats →', { fontSize: '16px', fill: '#4ade80', fontFamily: 'monospace' }).setOrigin(0.5);
       confirmBg.on('pointerover', () => confirmBg.setFillStyle(0x22c55e));
@@ -754,9 +745,8 @@ class TeamBuilderScene extends Phaser.Scene {
       specialization: this.selectedSpecialization,
       bonuses: { ...this.statAlloc },
     });
-    this.usedKeys.add(this.currentCharKey);
 
-    if (this.currentPicks.length < 3) {
+    if (this.currentPicks.length < TEAM_SIZE) {
       this.showCharacterSelect();
     } else {
       // Team complete — offer to save before advancing

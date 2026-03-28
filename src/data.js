@@ -12,6 +12,8 @@ let ABILITIES = {};
 let ITEMS = {};
 let SPECIALIZATIONS = {};
 let TYPE_CHART = {};
+let TEAM_SIZE = 6;
+let ATTACK_SLOTS = 4;
 let STAT_POINTS = 50;
 let STAT_MAX_PER = 20;
 let MAX_PLAYER_HP = 6;
@@ -43,6 +45,8 @@ async function loadFolder(folder) {
 async function loadGameData() {
   // Load config
   const cfg = await fetchJSON(`${DATA_ROOT}/config.json`);
+  TEAM_SIZE = cfg.teamSize;
+  ATTACK_SLOTS = cfg.attackSlots;
   STAT_POINTS = cfg.statPoints;
   STAT_MAX_PER = cfg.statMaxPer;
   MAX_PLAYER_HP = cfg.maxPlayerHp;

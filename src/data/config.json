@@ -1,4 +1,6 @@
 {
+  "teamSize": 6,
+  "attackSlots": 4,
   "statPoints": 50,
   "statMaxPer": 20,
   "maxPlayerHp": 6,
