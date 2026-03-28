@@ -3,7 +3,7 @@
   "name": "Meditate",
   "type": "status",
   "power": 0,
-  "description": "Raises own MAG by 1 stage. Stacks up to +3 for devastating magic.",
+  "description": "Raises own MAG by 1 stage (max +4, ×3.0). Boosts reset if you switch out.",
   "statFx": [
     { "target": "self", "stat": "mAtk", "stages": 1 }
   ],

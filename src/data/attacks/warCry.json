@@ -3,7 +3,7 @@
   "name": "War Cry",
   "type": "status",
   "power": 0,
-  "description": "Raises own ATK by 1 stage. Stacks up to +3 for 2.5× damage.",
+  "description": "Raises own ATK by 1 stage (max +4, ×3.0). Boosts reset if you switch out.",
   "statFx": [
     { "target": "self", "stat": "atk", "stages": 1 }
   ],

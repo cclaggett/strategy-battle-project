@@ -3,7 +3,7 @@
   "name": "Quicken",
   "type": "status",
   "power": 0,
-  "description": "Raises own SPD by 1 stage. Faster characters act first within the same priority bracket.",
+  "description": "Raises own SPD by 1 stage (max +4). Faster characters act first. Boosts reset if you switch out.",
   "statFx": [
     { "target": "self", "stat": "spd", "stages": 1 }
   ],

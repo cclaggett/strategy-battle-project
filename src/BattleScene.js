@@ -87,7 +87,7 @@ class BattleScene extends Phaser.Scene {
       if (fx.type === 'statFx') {
         const target = fx.target === 'self' ? char : enemy;
         if (!target || !target.alive) continue;
-        target.stages[fx.stat] = (target.stages[fx.stat] || 0) + fx.stages;
+        target.stages[fx.stat] = Math.max(-4, Math.min(4, (target.stages[fx.stat] || 0) + fx.stages));
         const statLabel = STAT_LABELS[fx.stat] || fx.stat;
         const dir = fx.stages > 0 ? 'rose' : 'fell';
         const mult = stageMultiplier(target.stages[fx.stat]);
@@ -300,8 +300,8 @@ class BattleScene extends Phaser.Scene {
     const eff = effectiveStat(char, stat);
     const stage = char.stages[stat];
     let arrow = '';
-    if (stage > 0) arrow = '↑'.repeat(Math.min(stage, 3));
-    if (stage < 0) arrow = '↓'.repeat(Math.min(Math.abs(stage), 3));
+    if (stage > 0) arrow = '↑'.repeat(Math.min(stage, 4));
+    if (stage < 0) arrow = '↓'.repeat(Math.min(Math.abs(stage), 4));
     return `${label} ${eff}${arrow}`;
   }
 
@@ -772,6 +772,8 @@ class BattleScene extends Phaser.Scene {
         this[prop] = s.choice.index;
         const newChar = s.player === 1 ? this.p1Active : this.p2Active;
         this.log.push(`P${s.player} switches ${oldChar.name} → ${newChar.name}!`);
+        // Clear stat stages on the departing character
+        ALLOCATABLE_STATS.forEach(st => { oldChar.stages[st] = 0; });
         // Reset consecutive protect tracking on switch (new character hasn't used protect)
         if (s.player === 1) this.p1UsedProtectLastTurn = false;
         else this.p2UsedProtectLastTurn = false;
@@ -1031,7 +1033,7 @@ class BattleScene extends Phaser.Scene {
           const fxTarget = fx.target === 'self' ? this.resolveTarget({ ...effect, targetPosition: 'self' }).char
                                                  : this.resolveTarget({ ...effect, targetPosition: 'enemy' }).char;
           if (!fxTarget || !fxTarget.alive) return;
-          fxTarget.stages[fx.stat] = (fxTarget.stages[fx.stat] || 0) + fx.stages;
+          fxTarget.stages[fx.stat] = Math.max(-4, Math.min(4, (fxTarget.stages[fx.stat] || 0) + fx.stages));
           const statLabel = STAT_LABELS[fx.stat] || fx.stat;
           const dir = fx.stages > 0 ? 'rose' : 'fell';
           const mult = stageMultiplier(fxTarget.stages[fx.stat]);
@@ -1087,7 +1089,7 @@ class BattleScene extends Phaser.Scene {
         atk.statFx.forEach(fx => {
           const fxTarget = fx.target === 'self' ? this.resolveTarget({ ...effect, targetPosition: 'self' }).char : target;
           if (!fxTarget || !fxTarget.alive) return;
-          fxTarget.stages[fx.stat] = (fxTarget.stages[fx.stat] || 0) + fx.stages;
+          fxTarget.stages[fx.stat] = Math.max(-4, Math.min(4, (fxTarget.stages[fx.stat] || 0) + fx.stages));
           const statLabel = STAT_LABELS[fx.stat] || fx.stat;
           const dir = fx.stages > 0 ? 'rose' : 'fell';
           const mult = stageMultiplier(fxTarget.stages[fx.stat]);
@@ -1246,7 +1248,7 @@ class BattleScene extends Phaser.Scene {
       atk.statFx.forEach(fx => {
         const target = fx.target === 'self' ? attacker : defender;
         if (!target.alive) return;
-        target.stages[fx.stat] = (target.stages[fx.stat] || 0) + fx.stages;
+        target.stages[fx.stat] = Math.max(-4, Math.min(4, (target.stages[fx.stat] || 0) + fx.stages));
         const statLabel = STAT_LABELS[fx.stat] || fx.stat;
         const dir = fx.stages > 0 ? 'rose' : 'fell';
         const mult = stageMultiplier(target.stages[fx.stat]);
