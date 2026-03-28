@@ -68,6 +68,9 @@ class TeamEditorScene extends Phaser.Scene {
     this.mainObjects = [];
     this.sidebarObjects = [];
 
+    // Enable drag for sliders
+    this.input.topOnly = false;
+
     this.drawSidebar();
     this.drawMain();
   }
@@ -248,48 +251,70 @@ class TeamEditorScene extends Phaser.Scene {
       }).setOrigin(0, 0.5);
       this.mainObjects.push(baseT);
 
-      {
-        // Minus button
-        const canMinus = bonus > 0;
-        const minBg = this.add.rectangle(OX + 95, by, 24, 24, canMinus ? 0x5c2a2a : 0x222222)
-          .setStrokeStyle(1, canMinus ? 0xe94560 : 0x333333);
-        const minT = this.add.text(OX + 95, by, '−', { fontSize: '16px', fill: canMinus ? '#e94560' : '#555', fontFamily: 'monospace' }).setOrigin(0.5);
-        if (canMinus) {
-          minBg.setInteractive({ useHandCursor: true });
-          minBg.on('pointerdown', () => { slot.bonuses[stat]--; this.redraw(); });
-        }
-        this.mainObjects.push(minBg, minT);
+      // Slider for bonus allocation
+      const sliderX = OX + 85;
+      const sliderW = 160;
+      const maxAlloc = Math.min(STAT_MAX_PER, bonus + pointsLeft); // max this stat can go
 
-        // Bonus display
-        const bonusT = this.add.text(OX + 120, by, `+${bonus}`, {
-          fontSize: '11px', fill: bonus > 0 ? '#4ade80' : '#555', fontFamily: 'monospace'
-        }).setOrigin(0.5);
-        this.mainObjects.push(bonusT);
+      // Track
+      const trackBg = this.add.rectangle(sliderX + sliderW / 2, by, sliderW, 6, 0x222222).setStrokeStyle(1, 0x333333);
+      this.mainObjects.push(trackBg);
 
-        // Plus button
-        const canPlus = bonus < STAT_MAX_PER && pointsLeft > 0;
-        const plusBg = this.add.rectangle(OX + 145, by, 24, 24, canPlus ? 0x1a4a1a : 0x222222)
-          .setStrokeStyle(1, canPlus ? 0x4ade80 : 0x333333);
-        const plusT = this.add.text(OX + 145, by, '+', { fontSize: '16px', fill: canPlus ? '#4ade80' : '#555', fontFamily: 'monospace' }).setOrigin(0.5);
-        if (canPlus) {
-          plusBg.setInteractive({ useHandCursor: true });
-          plusBg.on('pointerdown', () => { slot.bonuses[stat]++; this.redraw(); });
+      // Filled portion
+      const fillPct = STAT_MAX_PER > 0 ? bonus / STAT_MAX_PER : 0;
+      const fillW = Math.max(sliderW * fillPct, 0);
+      const trackFill = this.add.rectangle(sliderX + fillW / 2, by, fillW, 6, 0x4ade80).setAlpha(0.7);
+      this.mainObjects.push(trackFill);
+
+      // Thumb (draggable)
+      const thumbX = sliderX + fillW;
+      const thumb = this.add.circle(thumbX, by, 8, 0x4ade80).setStrokeStyle(2, 0xffffff)
+        .setInteractive({ useHandCursor: true });
+      this.input.setDraggable(thumb);
+      this.mainObjects.push(thumb);
+
+      // Bonus text
+      const bonusT = this.add.text(sliderX + sliderW + 10, by, `+${bonus}`, {
+        fontSize: '11px', fill: bonus > 0 ? '#4ade80' : '#555', fontFamily: 'monospace'
+      }).setOrigin(0, 0.5);
+      this.mainObjects.push(bonusT);
+
+      // Drag handler
+      const statRef = stat; // closure capture
+      thumb.on('drag', (pointer, dragX) => {
+        const clamped = Phaser.Math.Clamp(dragX, sliderX, sliderX + sliderW);
+        const rawVal = Math.round(((clamped - sliderX) / sliderW) * STAT_MAX_PER);
+        const newBonus = Phaser.Math.Clamp(rawVal, 0, maxAlloc);
+        if (newBonus !== slot.bonuses[statRef]) {
+          slot.bonuses[statRef] = newBonus;
+          this.redraw();
         }
-        this.mainObjects.push(plusBg, plusT);
-      }
+      });
+
+      // Click on track to set value
+      trackBg.setInteractive({ useHandCursor: true });
+      trackBg.on('pointerdown', (pointer) => {
+        const localX = pointer.x;
+        const clamped = Phaser.Math.Clamp(localX, sliderX, sliderX + sliderW);
+        const rawVal = Math.round(((clamped - sliderX) / sliderW) * STAT_MAX_PER);
+        const newBonus = Phaser.Math.Clamp(rawVal, 0, maxAlloc);
+        slot.bonuses[statRef] = newBonus;
+        this.redraw();
+      });
 
       // Spec modifier
+      const specX = sliderX + sliderW + 40;
       if (specDiff !== 0) {
         const specColor = specDiff > 0 ? '#4ade80' : '#e94560';
-        const specT = this.add.text(OX + 175, by, `${specDiff > 0 ? '+' : ''}${specDiff}`, {
+        const specT = this.add.text(specX, by, `${specDiff > 0 ? '+' : ''}${specDiff}`, {
           fontSize: '10px', fill: specColor, fontFamily: 'monospace'
-        }).setOrigin(0.5);
+        }).setOrigin(0, 0.5);
         this.mainObjects.push(specT);
       }
 
-      // Stat bar
-      const barX = OX + 200;
-      const barW = 120;
+      // Stat bar (visual)
+      const barX = specX + 35;
+      const barW = 100;
       const maxStatVal = stat === 'hp' ? 200 : 80;
       const basePct = Math.min(baseStat / maxStatVal, 1);
       const finalPct = Math.min(finalVal / maxStatVal, 1);
