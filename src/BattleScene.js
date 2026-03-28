@@ -26,6 +26,10 @@ class BattleScene extends Phaser.Scene {
     this.selectingPlayer = 1;
     this.roundNumber = 0;
 
+    // Track whether each player used a protect-type move last turn (for consecutive fail)
+    this.p1UsedProtectLastTurn = false;
+    this.p2UsedProtectLastTurn = false;
+
     // Pending multi-turn effects queue
     // Each entry: { id, atkKey, casterSnap, sourcePlayer, targetPosition ('self'|'enemy'),
     //               turnsLeft, duration?, totalDuration?, type: 'delay'|'duration' }
@@ -731,8 +735,16 @@ class BattleScene extends Phaser.Scene {
     // Track blocking/protecting state for this round
     this.p1Blocking = (this.p1PlayerAction.key === 'block');
     this.p2Blocking = (this.p2PlayerAction.key === 'block');
-    this.p1Protected = (this.p1Choice.type === 'attack' && ATTACKS[this.p1Choice.key] && ATTACKS[this.p1Choice.key].type === 'protect');
-    this.p2Protected = (this.p2Choice.type === 'attack' && ATTACKS[this.p2Choice.key] && ATTACKS[this.p2Choice.key].type === 'protect');
+    // Protect: blocks all damage but fails if used consecutively (any protect-type move)
+    const p1TryProtect = (this.p1Choice.type === 'attack' && ATTACKS[this.p1Choice.key] && ATTACKS[this.p1Choice.key].type === 'protect');
+    const p2TryProtect = (this.p2Choice.type === 'attack' && ATTACKS[this.p2Choice.key] && ATTACKS[this.p2Choice.key].type === 'protect');
+    this.p1Protected = p1TryProtect && !this.p1UsedProtectLastTurn;
+    this.p2Protected = p2TryProtect && !this.p2UsedProtectLastTurn;
+    this.p1ProtectFailed = p1TryProtect && this.p1UsedProtectLastTurn;
+    this.p2ProtectFailed = p2TryProtect && this.p2UsedProtectLastTurn;
+    // Track for next turn
+    this.p1UsedProtectLastTurn = p1TryProtect;
+    this.p2UsedProtectLastTurn = p2TryProtect;
 
     let delay = 0;
 
@@ -760,6 +772,9 @@ class BattleScene extends Phaser.Scene {
         this[prop] = s.choice.index;
         const newChar = s.player === 1 ? this.p1Active : this.p2Active;
         this.log.push(`P${s.player} switches ${oldChar.name} → ${newChar.name}!`);
+        // Reset consecutive protect tracking on switch (new character hasn't used protect)
+        if (s.player === 1) this.p1UsedProtectLastTurn = false;
+        else this.p2UsedProtectLastTurn = false;
         // Fire onEntry for the arriving character
         this.fireAbilityHooks('onEntry', { char: newChar, enemy, player: s.player });
         this.refreshUI();
@@ -778,7 +793,12 @@ class BattleScene extends Phaser.Scene {
       attacks.forEach(a => {
         if (a.choice.type === 'attack' && ATTACKS[a.choice.key] && ATTACKS[a.choice.key].type === 'protect') {
           const char = a.player === 1 ? this.p1Active : this.p2Active;
-          this.log.push(`${char.name} takes a protective stance!`);
+          const failed = a.player === 1 ? this.p1ProtectFailed : this.p2ProtectFailed;
+          if (failed) {
+            this.log.push(`${char.name} tried to protect but it failed from consecutive use!`);
+          } else {
+            this.log.push(`${char.name} takes a protective stance!`);
+          }
         }
       });
       this.refreshUI();
@@ -1182,6 +1202,16 @@ class BattleScene extends Phaser.Scene {
     } else if (targetPlayer) {
       this.dealPlayerDamage(defenderPlayer, 1, `${attacker.name} fires ${atk.name} at Player ${defenderPlayer}`);
     } else {
+      // Check if defender is protected (blocks all character damage)
+      const defProtected = defenderPlayer === 1 ? this.p1Protected : this.p2Protected;
+      if (defProtected && result.damage > 0) {
+        this.log.push(`${attacker.name} uses ${atk.name} → ${defender.name} is protected! No damage!`);
+        // Spread still gets blocked by dealPlayerDamage's protect check
+        if (atk.spread) {
+          this.dealPlayerDamage(defenderPlayer, 1, `${atk.name} spreads to hit Player ${defenderPlayer}`);
+        }
+        return;
+      }
       defender.currentHp = Math.max(0, defender.currentHp - result.damage);
       const critTag = result.isCrit ? ' 💥' : '';
       this.log.push(`${attacker.name} uses ${atk.name} → ${result.damage} dmg to ${defender.name}!${critTag}`);

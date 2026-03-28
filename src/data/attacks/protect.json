@@ -3,6 +3,6 @@
   "name": "Protect",
   "type": "protect",
   "power": 0,
-  "description": "High priority (+2). Shields your character and absorbs 1 incoming player HP damage this turn.",
+  "description": "High priority (+2). Blocks ALL damage to your character and player HP this turn. Fails if any protect-type move was used the previous turn.",
   "priority": 2
 }
