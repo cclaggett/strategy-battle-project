@@ -447,7 +447,7 @@ class TeamEditorScene extends Phaser.Scene {
     // Build list items
     const listY = OY + 65;
     const listH = OH - 75;
-    const itemH = 42;
+    const itemH = 56;
     let items = this.getOverlayItems(type);
 
     // Create mask zone for scrolling
@@ -473,13 +473,13 @@ class TeamEditorScene extends Phaser.Scene {
           .setInteractive({ useHandCursor: true });
         bg.setData('listItem', true);
 
-        const txt = this.add.text(OX + 40, iy - 6, item.displayName, {
+        const txt = this.add.text(OX + 40, iy - 12, item.displayName, {
           fontSize: '12px', fill: isSelected ? '#4ade80' : '#fff', fontFamily: 'monospace'
         }).setOrigin(0, 0.5);
         txt.setData('listItem', true);
 
-        const desc = this.add.text(OX + 40, iy + 10, item.description || '', {
-          fontSize: '9px', fill: '#888', fontFamily: 'monospace'
+        const desc = this.add.text(OX + 40, iy + 8, item.description || '', {
+          fontSize: '9px', fill: '#888', fontFamily: 'monospace', wordWrap: { width: OW - 80 }
         }).setOrigin(0, 0.5);
         desc.setData('listItem', true);
 
@@ -577,13 +577,11 @@ class TeamEditorScene extends Phaser.Scene {
         const otherSelected = slot.attacks.filter((a, i) => i !== moveIdx && a);
         return ch.pool.map(atkId => {
           const atk = ATTACKS[atkId];
-          let desc = atk.type;
-          if (atk.damageType && TYPE_CHART.types[atk.damageType]) desc += ` ${TYPE_CHART.types[atk.damageType].emoji}`;
-          if (atk.power > 0) desc += atk.type === 'heal' ? ` ${atk.power}%` : ` pwr:${atk.power}`;
-          if (atk.spread) desc += ' 🌊';
-          if (atk.range === 'long') desc += ' 🎯';
+          const typeEmoji = (atk.damageType && TYPE_CHART.types[atk.damageType]) ? TYPE_CHART.types[atk.damageType].emoji + ' ' : '';
+          const powerStr = atk.power > 0 ? (atk.type === 'heal' ? ` | ${atk.power}%` : ` | Pwr ${atk.power}`) : '';
+          const header = `${typeEmoji}${atk.type}${powerStr}`;
           const taken = otherSelected.includes(atkId);
-          return { id: atkId, displayName: `${atk.name}${taken ? ' (taken)' : ''}`, description: desc, disabled: taken };
+          return { id: atkId, displayName: `${atk.name}${taken ? ' (taken)' : ''}`, description: `${header} — ${atk.description}`, disabled: taken };
         });
       }
 
