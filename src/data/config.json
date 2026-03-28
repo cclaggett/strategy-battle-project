@@ -5,6 +5,6 @@
   "statMaxPer": 20,
   "maxPlayerHp": 6,
   "playerActionSlots": 3,
-  "allocatableStats": ["atk", "def", "mAtk", "mDef", "spd"],
-  "statLabels": { "atk": "ATK", "def": "DEF", "mAtk": "MAG", "mDef": "RES", "spd": "SPD" }
+  "allocatableStats": ["hp", "atk", "def", "mAtk", "mDef", "spd"],
+  "statLabels": { "hp": "HP", "atk": "ATK", "def": "DEF", "mAtk": "MAG", "mDef": "RES", "spd": "SPD" }
 }

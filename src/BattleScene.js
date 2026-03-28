@@ -38,6 +38,9 @@ class BattleScene extends Phaser.Scene {
     const char = { key, ...t, attacks, ability: ability || null, item: item || null, itemConsumed: false, itemSealed: false, specialization: specialization || null, maxHp: t.hp, currentHp: t.hp, alive: true };
     if (bonuses) {
       ALLOCATABLE_STATS.forEach(s => { char[s] += (bonuses[s] || 0); });
+      // Sync HP fields after bonus allocation
+      char.maxHp = char.hp;
+      char.currentHp = char.hp;
     }
     // Apply specialization multipliers after skill investment
     if (specialization && SPECIALIZATIONS[specialization]) {

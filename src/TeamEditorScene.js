@@ -214,17 +214,16 @@ class TeamEditorScene extends Phaser.Scene {
     // ── Stats section ──
     const statsY = 125;
     const rowH = 38;
-    const allStats = ['hp', ...ALLOCATABLE_STATS];
-    const statNames = { hp: 'HP', ...STAT_LABELS };
+    const allStats = ALLOCATABLE_STATS;
+    const statNames = { ...STAT_LABELS };
 
     const pointsUsed = Object.values(slot.bonuses).reduce((a, b) => a + b, 0);
     const pointsLeft = STAT_POINTS - pointsUsed;
 
     allStats.forEach((stat, i) => {
       const by = statsY + i * rowH;
-      const isHp = stat === 'hp';
       const baseStat = char[stat];
-      const bonus = isHp ? 0 : (slot.bonuses[stat] || 0);
+      const bonus = slot.bonuses[stat] || 0;
       const afterInvest = baseStat + bonus;
 
       // Specialization modifier
@@ -249,7 +248,7 @@ class TeamEditorScene extends Phaser.Scene {
       }).setOrigin(0, 0.5);
       this.mainObjects.push(baseT);
 
-      if (!isHp) {
+      {
         // Minus button
         const canMinus = bonus > 0;
         const minBg = this.add.rectangle(OX + 95, by, 24, 24, canMinus ? 0x5c2a2a : 0x222222)
@@ -291,7 +290,7 @@ class TeamEditorScene extends Phaser.Scene {
       // Stat bar
       const barX = OX + 200;
       const barW = 120;
-      const maxStatVal = isHp ? 200 : 80;
+      const maxStatVal = stat === 'hp' ? 200 : 80;
       const basePct = Math.min(baseStat / maxStatVal, 1);
       const finalPct = Math.min(finalVal / maxStatVal, 1);
       const barBg2 = this.add.rectangle(barX + barW / 2, by, barW, 10, 0x222222);
