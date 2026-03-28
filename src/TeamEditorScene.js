@@ -68,8 +68,26 @@ class TeamEditorScene extends Phaser.Scene {
     this.mainObjects = [];
     this.sidebarObjects = [];
 
-    // Enable drag for sliders
-    this.input.topOnly = false;
+    // Slider drag state
+    this._draggingStat = null;
+    this._sliderMeta = {}; // stat -> { sliderX, sliderW, maxAlloc, slot }
+
+    // Scene-level pointer tracking for slider dragging
+    this.input.on('pointermove', (pointer) => {
+      if (!this._draggingStat || !pointer.isDown) return;
+      const meta = this._sliderMeta[this._draggingStat];
+      if (!meta) return;
+      const clamped = Phaser.Math.Clamp(pointer.x, meta.sliderX, meta.sliderX + meta.sliderW);
+      const rawVal = Math.round(((clamped - meta.sliderX) / meta.sliderW) * STAT_MAX_PER);
+      const newBonus = Phaser.Math.Clamp(rawVal, 0, meta.maxAlloc);
+      if (newBonus !== meta.slot.bonuses[this._draggingStat]) {
+        meta.slot.bonuses[this._draggingStat] = newBonus;
+        this.redraw();
+      }
+    });
+    this.input.on('pointerup', () => {
+      this._draggingStat = null;
+    });
 
     this.drawSidebar();
     this.drawMain();
@@ -145,6 +163,7 @@ class TeamEditorScene extends Phaser.Scene {
   drawMain() {
     this.mainObjects.forEach(o => o.destroy());
     this.mainObjects = [];
+    this._sliderMeta = {};
 
     const OX = 140; // offset past sidebar
     const PW = this.W - OX - 20; // panel width
@@ -254,7 +273,11 @@ class TeamEditorScene extends Phaser.Scene {
       // Slider for bonus allocation
       const sliderX = OX + 85;
       const sliderW = 160;
-      const maxAlloc = Math.min(STAT_MAX_PER, bonus + pointsLeft); // max this stat can go
+      const maxAlloc = Math.min(STAT_MAX_PER, bonus + pointsLeft);
+      const statRef = stat;
+
+      // Register slider metadata for scene-level drag tracking
+      this._sliderMeta[statRef] = { sliderX, sliderW, maxAlloc, slot };
 
       // Track
       const trackBg = this.add.rectangle(sliderX + sliderW / 2, by, sliderW, 6, 0x222222).setStrokeStyle(1, 0x333333);
@@ -266,11 +289,9 @@ class TeamEditorScene extends Phaser.Scene {
       const trackFill = this.add.rectangle(sliderX + fillW / 2, by, fillW, 6, 0x4ade80).setAlpha(0.7);
       this.mainObjects.push(trackFill);
 
-      // Thumb (draggable)
+      // Thumb
       const thumbX = sliderX + fillW;
-      const thumb = this.add.circle(thumbX, by, 8, 0x4ade80).setStrokeStyle(2, 0xffffff)
-        .setInteractive({ useHandCursor: true });
-      this.input.setDraggable(thumb);
+      const thumb = this.add.circle(thumbX, by, 8, 0x4ade80).setStrokeStyle(2, 0xffffff);
       this.mainObjects.push(thumb);
 
       // Bonus text
@@ -279,23 +300,15 @@ class TeamEditorScene extends Phaser.Scene {
       }).setOrigin(0, 0.5);
       this.mainObjects.push(bonusT);
 
-      // Drag handler
-      const statRef = stat; // closure capture
-      thumb.on('drag', (pointer, dragX) => {
-        const clamped = Phaser.Math.Clamp(dragX, sliderX, sliderX + sliderW);
-        const rawVal = Math.round(((clamped - sliderX) / sliderW) * STAT_MAX_PER);
-        const newBonus = Phaser.Math.Clamp(rawVal, 0, maxAlloc);
-        if (newBonus !== slot.bonuses[statRef]) {
-          slot.bonuses[statRef] = newBonus;
-          this.redraw();
-        }
-      });
+      // Hit zone — pointerdown starts drag, scene pointermove handles the rest
+      const hitZone = this.add.rectangle(sliderX + sliderW / 2, by, sliderW + 20, 24, 0x000000).setAlpha(0.001)
+        .setInteractive({ useHandCursor: true });
+      this.mainObjects.push(hitZone);
 
-      // Click on track to set value
-      trackBg.setInteractive({ useHandCursor: true });
-      trackBg.on('pointerdown', (pointer) => {
-        const localX = pointer.x;
-        const clamped = Phaser.Math.Clamp(localX, sliderX, sliderX + sliderW);
+      hitZone.on('pointerdown', (pointer) => {
+        this._draggingStat = statRef;
+        // Immediately apply click position
+        const clamped = Phaser.Math.Clamp(pointer.x, sliderX, sliderX + sliderW);
         const rawVal = Math.round(((clamped - sliderX) / sliderW) * STAT_MAX_PER);
         const newBonus = Phaser.Math.Clamp(rawVal, 0, maxAlloc);
         slot.bonuses[statRef] = newBonus;
