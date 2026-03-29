@@ -759,8 +759,21 @@ class BattleScene extends Phaser.Scene {
 
     let delay = 0;
 
-    // Resolve player actions first
-    delay = this.resolvePlayerActions(delay);
+    // Block resolves first (before everything else)
+    [1, 2].forEach(p => {
+      const actionObj = p === 1 ? this.p1PlayerAction : this.p2PlayerAction;
+      if (actionObj.key === 'block') {
+        const actions = this.getActions(p);
+        const entry = actions.find(a => a.key === 'block');
+        const pa = PLAYER_ACTIONS['block'];
+        if (entry && pa && pa.cooldown > 0) entry.cooldownLeft = pa.cooldown;
+        this.time.delayedCall(delay, () => {
+          this.log.push(`Player ${p} braces for impact!`);
+          this.refreshUI();
+        });
+        delay += 400;
+      }
+    });
 
     // Then character actions
     const switches = [];
@@ -817,7 +830,7 @@ class BattleScene extends Phaser.Scene {
       this.refreshUI();
 
       if (realAttacks.length === 0) {
-        this.time.delayedCall(400, () => this.checkRoundEnd());
+        this.time.delayedCall(400, () => this.resolveNonBlockPlayerActions(() => this.checkRoundEnd()));
         return;
       }
 
@@ -856,7 +869,8 @@ class BattleScene extends Phaser.Scene {
       // Execute brackets sequentially; within a bracket, resolve simultaneously
       const executeBracket = (bIdx) => {
         if (bIdx >= brackets.length) {
-          this.time.delayedCall(600, () => this.checkRoundEnd());
+          // Non-block player actions resolve after all attacks
+          this.time.delayedCall(600, () => this.resolveNonBlockPlayerActions(() => this.checkRoundEnd()));
           return;
         }
         const bracket = brackets[bIdx];
@@ -881,22 +895,33 @@ class BattleScene extends Phaser.Scene {
     });
   }
 
-  // ── Resolve Player Actions ──────────────────────────────────────
-  resolvePlayerActions(delay) {
+  // ── Resolve Non-Block Player Actions (after attacks) ─────────────
+  resolveNonBlockPlayerActions(callback) {
+    const toResolve = [];
     [1, 2].forEach(p => {
       const actionObj = p === 1 ? this.p1PlayerAction : this.p2PlayerAction;
       const actionKey = actionObj.key;
+      if (actionKey === 'none' || actionKey === 'block') return;
       const pa = PLAYER_ACTIONS[actionKey];
-      if (!pa || actionKey === 'none') return;
+      if (!pa) return;
 
-      // Put this action on cooldown
+      // Put on cooldown
       const actions = this.getActions(p);
       const entry = actions.find(a => a.key === actionKey);
-      if (entry && pa.cooldown > 0) {
-        entry.cooldownLeft = pa.cooldown;
-      }
+      if (entry && pa.cooldown > 0) entry.cooldownLeft = pa.cooldown;
 
+      toResolve.push({ p, actionObj, actionKey, pa });
+    });
+
+    if (toResolve.length === 0) {
+      callback();
+      return;
+    }
+
+    let delay = 0;
+    toResolve.forEach((item, idx) => {
       this.time.delayedCall(delay, () => {
+        const { p, actionObj, actionKey, pa } = item;
         const targetP = p === 1 ? 2 : 1;
 
         if (actionKey === 'heal') {
@@ -907,31 +932,31 @@ class BattleScene extends Phaser.Scene {
           } else {
             this.log.push(`Player ${p} tries to heal but is already at full!`);
           }
-        } else if (actionKey === 'block') {
-          this.log.push(`Player ${p} braces for impact!`);
         } else if (pa.type === 'charAttack') {
-          // Player action that attacks a character or player
           if (actionObj.targetPlayer) {
-            // Target player for 1 HP
             this.dealPlayerDamage(targetP, 1, `Player ${p} fires ${pa.name} at Player ${targetP}`);
           } else {
-            // Target opposing character with fixed stats
             const defender = p === 1 ? this.p2Active : this.p1Active;
-            const dmg = calcPlayerActionDamage(pa, defender);
-            defender.currentHp = Math.max(0, defender.currentHp - dmg);
-            this.log.push(`Player ${p} uses ${pa.name} → ${dmg} dmg to ${defender.name}!`);
-            if (defender.currentHp <= 0) {
-              defender.alive = false;
-              this.log.push(`${defender.name} is KO'd!`);
+            if (defender && defender.alive) {
+              const dmg = calcPlayerActionDamage(pa, defender);
+              defender.currentHp = Math.max(0, defender.currentHp - dmg);
+              this.log.push(`Player ${p} uses ${pa.name} → ${dmg} dmg to ${defender.name}!`);
+              if (defender.currentHp <= 0) {
+                defender.alive = false;
+                this.log.push(`${defender.name} is KO'd!`);
+              }
             }
           }
         }
         this.refreshUI();
+
+        // After last action, call back
+        if (idx === toResolve.length - 1) {
+          this.time.delayedCall(400, callback);
+        }
       });
       delay += 400;
     });
-
-    return delay;
   }
 
   // ── Pending Effects: Queue a delayed or duration effect ────────
