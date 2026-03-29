@@ -20,6 +20,7 @@ let MAX_PLAYER_HP = 6;
 let PLAYER_ACTION_SLOTS = 3;
 let ALLOCATABLE_STATS = ['atk', 'def', 'mAtk', 'mDef', 'spd'];
 let STAT_LABELS = { atk: 'ATK', def: 'DEF', mAtk: 'MAG', mDef: 'RES', spd: 'SPD' };
+const DAMAGE_SCALER = 0.6;  // Global damage multiplier — lower = slower games
 
 const DATA_ROOT = 'src/data';
 const cacheBust = '?v=' + Date.now();
@@ -172,12 +173,12 @@ function calcDamageResult(attack, attacker, defender) {
     const defStageUsed = Math.min(0, defStage);
     offense = Math.round(attacker[offStat] * stageMultiplier(offStageUsed));
     defense = Math.round(defender[defStat] * stageMultiplier(defStageUsed));
-    const baseDmg = atk.power * (offense / defense) * multiplier * critBonusMult;
+    const baseDmg = atk.power * (offense / defense) * multiplier * critBonusMult * DAMAGE_SCALER;
     return { damage: Math.max(1, Math.round(baseDmg)), isCrit: true, isImmune: false, typeLabel };
   } else {
     offense = effectiveStat(attacker, offStat);
     defense = effectiveStat(defender, defStat);
-    const baseDmg = atk.power * (offense / defense) * multiplier;
+    const baseDmg = atk.power * (offense / defense) * multiplier * DAMAGE_SCALER;
     return { damage: Math.max(1, Math.round(baseDmg)), isCrit: false, isImmune: false, typeLabel };
   }
 }
@@ -192,5 +193,5 @@ function calcPlayerActionDamage(actionDef, defender) {
   const offense = actionDef.offenseBase;
   const defStat = actionDef.offenseStat === 'atk' ? 'def' : 'mDef';
   const defense = effectiveStat(defender, defStat);
-  return Math.max(1, Math.round(actionDef.power * (offense / defense)));
+  return Math.max(1, Math.round(actionDef.power * (offense / defense) * DAMAGE_SCALER));
 }
