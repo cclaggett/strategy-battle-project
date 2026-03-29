@@ -3,9 +3,8 @@
   "name": "Arrow Barrage",
   "type": "physical",
   "power": 35,
-  "delay": 1,
+  "delay": 2,
   "stackable": true,
-  "description": "Ice-type physical. Delayed 1 turn. Volley of arrows rains down — can stack multiple barrages!",
+  "description": "Delayed 1 turn. Volley of arrows rains down — can stack multiple barrages!",
   "priority": 0,
-  "damageType": "ice"
 }
