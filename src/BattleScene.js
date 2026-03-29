@@ -900,7 +900,6 @@ class BattleScene extends Phaser.Scene {
             if (defender.currentHp <= 0) {
               defender.alive = false;
               this.log.push(`${defender.name} is KO'd!`);
-              this.dealPlayerDamage(targetP, 1, `Player ${targetP} loses 1 HP from the KO`);
             }
           }
         }
@@ -1076,7 +1075,6 @@ class BattleScene extends Phaser.Scene {
           target.alive = false;
           this.log.push(`${target.name} is KO'd!`);
           this.fireAbilityHooks('onKO', { char: target, enemy: effect.casterSnap, player: defenderPlayer });
-          this.dealPlayerDamage(defenderPlayer, 1, `Player ${defenderPlayer} loses 1 HP from the KO`);
         }
 
         if (atk.spread) {
@@ -1235,7 +1233,6 @@ class BattleScene extends Phaser.Scene {
         this.log.push(`${defender.name} is KO'd!`);
         // Fire onKO for the KO'd character
         this.fireAbilityHooks('onKO', { char: defender, enemy: attacker, player: defenderPlayer });
-        this.dealPlayerDamage(defenderPlayer, 1, `Player ${defenderPlayer} loses 1 HP from the KO`);
       }
 
       if (atk.spread) {
