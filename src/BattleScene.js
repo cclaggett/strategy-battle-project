@@ -837,25 +837,47 @@ class BattleScene extends Phaser.Scene {
       });
 
       ordered.sort((a, b) => {
-        if (b.priority !== a.priority) return b.priority - a.priority; // higher priority first
-        if (b.speed !== a.speed) return b.speed - a.speed; // higher speed first
-        return Math.random() - 0.5; // tie-break randomly
+        if (b.priority !== a.priority) return b.priority - a.priority;
+        if (b.speed !== a.speed) return b.speed - a.speed;
+        return 0; // keep stable for simultaneous grouping
       });
 
-      // Execute sequentially with delays
-      const executeNext = (idx) => {
-        if (idx >= ordered.length) {
+      // Group into simultaneous brackets (same priority + same speed)
+      const brackets = [];
+      ordered.forEach(entry => {
+        const last = brackets[brackets.length - 1];
+        if (last && last[0].priority === entry.priority && last[0].speed === entry.speed) {
+          last.push(entry);
+        } else {
+          brackets.push([entry]);
+        }
+      });
+
+      // Execute brackets sequentially; within a bracket, resolve simultaneously
+      const executeBracket = (bIdx) => {
+        if (bIdx >= brackets.length) {
           this.time.delayedCall(600, () => this.checkRoundEnd());
           return;
         }
-        const entry = ordered[idx];
-        if (entry.attacker.currentHp > 0) {
-          this.executeAttack(entry.attacker, entry.defender, entry.choice.key, entry.player, entry.choice.targetPlayer);
+        const bracket = brackets[bIdx];
+
+        if (bracket.length === 1) {
+          // Single attack — resolve normally
+          const entry = bracket[0];
+          if (entry.attacker.currentHp > 0) {
+            this.executeAttack(entry.attacker, entry.defender, entry.choice.key, entry.player, entry.choice.targetPlayer);
+            this.refreshUI();
+          }
+          this.time.delayedCall(800, () => executeBracket(bIdx + 1));
+        } else {
+          // Simultaneous resolution — snapshot state, apply all damage, then resolve effects
+          this.log.push(`⚡ Speed tie — simultaneous resolution!`);
+          this.executeSimultaneous(bracket);
           this.refreshUI();
+          this.time.delayedCall(800, () => executeBracket(bIdx + 1));
         }
-        this.time.delayedCall(800, () => executeNext(idx + 1));
       };
-      executeNext(0);
+      executeBracket(0);
     });
   }
 
@@ -1157,6 +1179,286 @@ class BattleScene extends Phaser.Scene {
   }
 
   // ── Execute Character Attack ────────────────────────────────────
+  // ── Simultaneous Attack Resolution ─────────────────────────────
+  executeSimultaneous(bracket) {
+    // Snapshot all characters' HP/stats before any damage
+    const snapshots = new Map();
+    bracket.forEach(entry => {
+      if (!snapshots.has(entry.attacker)) {
+        snapshots.set(entry.attacker, { hp: entry.attacker.currentHp, alive: entry.attacker.alive });
+      }
+      if (!snapshots.has(entry.defender)) {
+        snapshots.set(entry.defender, { hp: entry.defender.currentHp, alive: entry.defender.alive });
+      }
+    });
+
+    // Calculate all results using snapshotted state (before any damage)
+    const results = bracket.map(entry => {
+      if (entry.attacker.currentHp <= 0) return null;
+
+      const atk = ATTACKS[entry.choice.key];
+
+      // Handle delayed/duration moves normally (they queue, don't deal immediate damage)
+      if ((atk.delay || 0) > 0 || (atk.duration || 0) > 0) {
+        this.queuePendingEffect(entry.choice.key, entry.attacker, entry.player, entry.choice.targetPlayer);
+        return null;
+      }
+
+      const result = calcDamageResult(entry.choice.key, entry.attacker, entry.defender);
+      const defenderPlayer = entry.player === 1 ? 2 : 1;
+
+      // Apply item boosts
+      if (result.damage > 0 && !result.isImmune && atk.type !== 'heal' && atk.type !== 'status') {
+        const boostMult = this.getItemDamageBoost(entry.attacker, atk.type);
+        if (boostMult !== 1.0) result.damage = Math.max(1, Math.round(result.damage * boostMult));
+      }
+      // Apply ward reduction
+      if (result.damage > 0 && !result.isImmune && atk.damageType && atk.type !== 'heal') {
+        const wardMult = this.fireItemOnHitByType(entry.defender, atk.damageType);
+        if (wardMult !== 1.0) result.damage = Math.max(1, Math.round(result.damage * wardMult));
+      }
+
+      return { entry, atk, result, defenderPlayer };
+    }).filter(r => r !== null);
+
+    // Apply all damage simultaneously
+    results.forEach(({ entry, atk, result, defenderPlayer }) => {
+      if (atk.type === 'heal') {
+        const healed = Math.min(-result.damage, entry.attacker.maxHp - entry.attacker.currentHp);
+        entry.attacker.currentHp += healed;
+        this.log.push(`${entry.attacker.name} heals for ${healed} HP!`);
+      } else if (atk.type === 'status') {
+        this.log.push(`${entry.attacker.name} uses ${atk.name}!`);
+      } else if (result.isImmune) {
+        this.log.push(`${entry.attacker.name} uses ${atk.name} → ${entry.defender.name} is immune!`);
+      } else if (entry.choice.targetPlayer) {
+        this.dealPlayerDamage(defenderPlayer, 1, `${entry.attacker.name} fires ${atk.name} at Player ${defenderPlayer}`);
+      } else {
+        const defProtected = defenderPlayer === 1 ? this.p1Protected : this.p2Protected;
+        if (defProtected && result.damage > 0) {
+          this.log.push(`${entry.attacker.name} uses ${atk.name} → ${entry.defender.name} is protected! No damage!`);
+          if (atk.spread) {
+            this.dealPlayerDamage(defenderPlayer, 1, `${atk.name} spreads to hit Player ${defenderPlayer}`);
+          }
+        } else {
+          entry.defender.currentHp = Math.max(0, entry.defender.currentHp - result.damage);
+          const critTag = result.isCrit ? ' 💥' : '';
+          this.log.push(`${entry.attacker.name} uses ${atk.name} → ${result.damage} dmg to ${entry.defender.name}!${critTag}`);
+          if (result.typeLabel) this.log.push(result.typeLabel);
+
+          if (atk.spread) {
+            this.dealPlayerDamage(defenderPlayer, 1, `${atk.name} spreads to hit Player ${defenderPlayer}`);
+          }
+        }
+      }
+    });
+
+    // Now apply stat effects, ability hooks, and KO checks after all damage
+    results.forEach(({ entry, atk, result, defenderPlayer }) => {
+      if (atk.type === 'heal' || atk.type === 'status' || result.isImmune) {
+        // Stat effects from status moves still apply
+        if (atk.statFx) {
+          atk.statFx.forEach(fx => {
+            const target = fx.target === 'self' ? entry.attacker : entry.defender;
+            if (!target.alive) return;
+            target.stages[fx.stat] = Math.max(-4, Math.min(4, (target.stages[fx.stat] || 0) + fx.stages));
+            const statLabel = STAT_LABELS[fx.stat] || fx.stat;
+            const dir = fx.stages > 0 ? 'rose' : 'fell';
+            const mult = stageMultiplier(target.stages[fx.stat]);
+            this.log.push(`${target.name}'s ${statLabel} ${dir}! (×${mult.toFixed(2)})`);
+          });
+        }
+        return;
+      }
+      if (entry.choice.targetPlayer) return;
+
+      // Fire ability hooks
+      if (entry.defender.alive || entry.defender.currentHp > 0) {
+        this.fireAbilityHooks('onHit', { char: entry.defender, enemy: entry.attacker, player: defenderPlayer });
+      }
+      this.fireAbilityHooks('onDealDamage', { char: entry.attacker, enemy: entry.defender, player: entry.player });
+
+      // Healing herb
+      if (entry.defender.currentHp > 0) {
+        this.fireItemOnHpBelow50(entry.defender, defenderPlayer);
+      }
+
+      // Stat effects
+      if (atk.statFx) {
+        atk.statFx.forEach(fx => {
+          const target = fx.target === 'self' ? entry.attacker : entry.defender;
+          if (!target.alive && target.currentHp <= 0) return;
+          target.stages[fx.stat] = Math.max(-4, Math.min(4, (target.stages[fx.stat] || 0) + fx.stages));
+          const statLabel = STAT_LABELS[fx.stat] || fx.stat;
+          const dir = fx.stages > 0 ? 'rose' : 'fell';
+          const mult = stageMultiplier(target.stages[fx.stat]);
+          this.log.push(`${target.name}'s ${statLabel} ${dir}! (×${mult.toFixed(2)})`);
+        });
+      }
+    });
+
+    // KO checks after all simultaneous damage
+    results.forEach(({ entry, atk, result, defenderPlayer }) => {
+      if (entry.defender.currentHp <= 0 && entry.defender.alive) {
+        entry.defender.alive = false;
+        this.log.push(`${entry.defender.name} is KO'd!`);
+        this.fireAbilityHooks('onKO', { char: entry.defender, enemy: entry.attacker, player: defenderPlayer });
+      }
+    });
+
+    // Check for mutual KO of last characters → sudden death
+    const p1Alive = this.p1Team.some(c => c.alive);
+    const p2Alive = this.p2Team.some(c => c.alive);
+    if (!p1Alive && !p2Alive) {
+      this.startSuddenDeath();
+    }
+  }
+
+  // ── Sudden Death ──────────────────────────────────────────────
+  startSuddenDeath() {
+    this.phase = 'suddenDeath';
+    this.log.push(`💀 SUDDEN DEATH! Both teams wiped — player actions only!`);
+    this.refreshUI();
+    this.promptText.setText(`💀 SUDDEN DEATH! Player 1 — pick your action:`);
+
+    // Reset cooldowns for sudden death
+    this.p1Actions.forEach(a => { a.cooldownLeft = 0; });
+    this.p2Actions.forEach(a => { a.cooldownLeft = 0; });
+
+    this.sdP1Action = null;
+    this.sdP2Action = null;
+    this.showSuddenDeathMenu(1);
+  }
+
+  showSuddenDeathMenu(player) {
+    this.clearButtons();
+    const W = this.battleW;
+    const H = this.scale.height;
+    const actions = this.getActions(player);
+    const myHp = player === 1 ? this.p1PlayerHp : this.p2PlayerHp;
+
+    this.promptText.setText(`💀 SUDDEN DEATH — Player ${player}, pick your action:`);
+
+    const allActions = [...actions, { key: 'none', cooldownLeft: 0 }];
+    const totalButtons = allActions.length;
+    const spacing = Math.min(140, (W - 40) / totalButtons);
+    const startX = W / 2 - (totalButtons - 1) * spacing / 2;
+
+    allActions.forEach((entry, i) => {
+      const pa = PLAYER_ACTIONS[entry.key];
+      const bx = startX + i * spacing;
+      const by = H * 0.76;
+
+      const onCooldown = entry.cooldownLeft > 0;
+      const dimHeal = (entry.key === 'heal' && myHp >= MAX_PLAYER_HP);
+      const disabled = onCooldown || dimHeal;
+
+      let bgColor = 0x2a2a2a;
+      if (!disabled) {
+        if (pa.type === 'defensive') bgColor = 0x1a3a1a;
+        else if (pa.type === 'heal') bgColor = 0x1a2a3a;
+        else if (pa.type === 'strike' || pa.type === 'charAttack') bgColor = 0x3a1a1a;
+      }
+
+      const bg = this.add.rectangle(bx, by, spacing - 8, 48, bgColor).setStrokeStyle(1, disabled ? 0x444444 : 0xffffff);
+      if (!disabled) bg.setInteractive({ useHandCursor: true });
+
+      const txt = this.add.text(bx, by - 10, pa.name, { fontSize: '11px', fill: disabled ? '#555' : '#fff', fontFamily: 'monospace' }).setOrigin(0.5);
+
+      let subStr = onCooldown ? `CD: ${entry.cooldownLeft}` : (pa.description.length > 25 ? pa.description.substring(0, 22) + '...' : pa.description);
+      const sub = this.add.text(bx, by + 10, subStr, { fontSize: '8px', fill: '#888', fontFamily: 'monospace', wordWrap: { width: spacing - 14 }, align: 'center' }).setOrigin(0.5);
+
+      if (!disabled) {
+        bg.on('pointerover', () => bg.setFillStyle(0xe94560));
+        bg.on('pointerout', () => bg.setFillStyle(bgColor));
+        bg.on('pointerdown', () => {
+          if (player === 1) {
+            this.sdP1Action = entry.key;
+            this.showSuddenDeathMenu(2);
+          } else {
+            this.sdP2Action = entry.key;
+            this.resolveSuddenDeathRound();
+          }
+        });
+      }
+
+      this.buttons.push(bg, txt, sub);
+    });
+  }
+
+  resolveSuddenDeathRound() {
+    this.clearButtons();
+    this.log.push(`--- Sudden Death Round ---`);
+
+    const p1Action = PLAYER_ACTIONS[this.sdP1Action];
+    const p2Action = PLAYER_ACTIONS[this.sdP2Action];
+
+    // Block resolves first (priority)
+    const p1Blocks = this.sdP1Action === 'block';
+    const p2Blocks = this.sdP2Action === 'block';
+
+    if (p1Blocks) {
+      this.p1Blocking = true;
+      this.log.push(`Player 1 blocks!`);
+    }
+    if (p2Blocks) {
+      this.p2Blocking = true;
+      this.log.push(`Player 2 blocks!`);
+    }
+
+    // Then resolve other actions simultaneously
+    [1, 2].forEach(p => {
+      const actionKey = p === 1 ? this.sdP1Action : this.sdP2Action;
+      const pa = PLAYER_ACTIONS[actionKey];
+      if (!pa || actionKey === 'none' || actionKey === 'block') return;
+
+      if (pa.type === 'heal') {
+        const prop = p === 1 ? 'p1PlayerHp' : 'p2PlayerHp';
+        if (this[prop] < MAX_PLAYER_HP) {
+          this[prop] = Math.min(MAX_PLAYER_HP, this[prop] + 1);
+          this.log.push(`Player ${p} heals 1 player HP!`);
+        }
+      } else if (pa.type === 'strike') {
+        const targetP = p === 1 ? 2 : 1;
+        this.dealPlayerDamage(targetP, 1, `Player ${p} strikes Player ${targetP}`);
+      }
+    });
+
+    // Clear blocking flags
+    this.p1Blocking = false;
+    this.p2Blocking = false;
+
+    // Tick cooldowns
+    this.p1Actions.forEach(a => { if (a.cooldownLeft > 0) a.cooldownLeft--; });
+    this.p2Actions.forEach(a => { if (a.cooldownLeft > 0) a.cooldownLeft--; });
+
+    // Set cooldowns for used actions
+    const p1Idx = this.p1Actions.findIndex(a => a.key === this.sdP1Action);
+    if (p1Idx >= 0 && p1Action.cooldown) this.p1Actions[p1Idx].cooldownLeft = p1Action.cooldown;
+    const p2Idx = this.p2Actions.findIndex(a => a.key === this.sdP2Action);
+    if (p2Idx >= 0 && p2Action.cooldown) this.p2Actions[p2Idx].cooldownLeft = p2Action.cooldown;
+
+    this.refreshUI();
+
+    // Check for winner
+    const p1Alive = this.p1PlayerHp > 0;
+    const p2Alive = this.p2PlayerHp > 0;
+
+    if (!p1Alive || !p2Alive) {
+      this.phase = 'gameover';
+      let winner;
+      if (!p1Alive && !p2Alive) winner = 'Draw';
+      else if (!p2Alive) winner = 'Player 1';
+      else winner = 'Player 2';
+      this.promptText.setText(`${winner} wins! (Sudden Death)\nClick to play again.`);
+      this.input.once('pointerdown', () => this.scene.start('BattlePrepScene'));
+      return;
+    }
+
+    // Next sudden death round
+    this.time.delayedCall(800, () => this.showSuddenDeathMenu(1));
+  }
+
   executeAttack(attacker, defender, atkKey, attackerPlayer, targetPlayer) {
     if (attacker.currentHp <= 0) return;
 
@@ -1310,6 +1612,12 @@ class BattleScene extends Phaser.Scene {
     const p1Lost = !p1Alive || !p1PlayerAlive;
     const p2Lost = !p2Alive || !p2PlayerAlive;
 
+    // Mutual team wipe with both players still having HP → sudden death
+    if (!p1Alive && !p2Alive && p1PlayerAlive && p2PlayerAlive) {
+      this.startSuddenDeath();
+      return;
+    }
+
     if (p1Lost || p2Lost) {
       this.phase = 'gameover';
       let winner;
@@ -1351,12 +1659,21 @@ class BattleScene extends Phaser.Scene {
       // Re-check for KOs caused by pending effects (e.g. delayed damage)
       this.handleKOSwaps(() => {
         // Check win condition again after pending effects
-        const p1StillAlive = this.p1Team.some(c => c.alive) && this.p1PlayerHp > 0;
-        const p2StillAlive = this.p2Team.some(c => c.alive) && this.p2PlayerHp > 0;
-        if (!p1StillAlive || !p2StillAlive) {
+        const p1StillAlive2 = this.p1Team.some(c => c.alive);
+        const p2StillAlive2 = this.p2Team.some(c => c.alive);
+
+        // Mutual team wipe with HP remaining → sudden death
+        if (!p1StillAlive2 && !p2StillAlive2 && this.p1PlayerHp > 0 && this.p2PlayerHp > 0) {
+          this.startSuddenDeath();
+          return;
+        }
+
+        const p1Ok = p1StillAlive2 && this.p1PlayerHp > 0;
+        const p2Ok = p2StillAlive2 && this.p2PlayerHp > 0;
+        if (!p1Ok || !p2Ok) {
           this.refreshUI();
-          const p1Lost2 = !this.p1Team.some(c => c.alive) || this.p1PlayerHp <= 0;
-          const p2Lost2 = !this.p2Team.some(c => c.alive) || this.p2PlayerHp <= 0;
+          const p1Lost2 = !p1StillAlive2 || this.p1PlayerHp <= 0;
+          const p2Lost2 = !p2StillAlive2 || this.p2PlayerHp <= 0;
           let winner;
           if (p1Lost2 && p2Lost2) winner = 'Draw';
           else if (p2Lost2) winner = 'Player 1';
