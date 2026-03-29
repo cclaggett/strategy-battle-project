@@ -674,14 +674,25 @@ class BattleScene extends Phaser.Scene {
     const candidates = [];
     team.forEach((c, i) => { if (c.alive && i !== activeIdx) candidates.push({ char: c, index: i }); });
 
-    const startX = W / 2 - (candidates.length) * 90;
+    // Grid layout: up to 3 per row
+    const btnW = 140;
+    const btnH = 50;
+    const gapX = 10;
+    const gapY = 10;
+    const cols = Math.min(candidates.length, 3);
+    const rows = Math.ceil(candidates.length / 3);
+    const baseY = H * 0.78;
 
     candidates.forEach((cand, i) => {
-      const bx = startX + i * 180;
-      const by = H * 0.80;
+      const row = Math.floor(i / 3);
+      const col = i % 3;
+      const colsInRow = row < rows - 1 ? 3 : ((candidates.length - 1) % 3) + 1;
+      const rowW = colsInRow * btnW + (colsInRow - 1) * gapX;
+      const bx = (W / 2) - (rowW / 2) + col * (btnW + gapX) + btnW / 2;
+      const by = baseY + row * (btnH + gapY);
 
-      const bg = this.add.rectangle(bx, by, 160, 55, color).setStrokeStyle(1, 0xffffff).setInteractive({ useHandCursor: true });
-      const nameT = this.add.text(bx, by - 14, cand.char.name, { fontSize: '13px', fill: '#fff', fontFamily: 'monospace' }).setOrigin(0.5);
+      const bg = this.add.rectangle(bx, by, btnW, btnH, color).setStrokeStyle(1, 0xffffff).setInteractive({ useHandCursor: true });
+      const nameT = this.add.text(bx, by - 14, cand.char.name, { fontSize: '12px', fill: '#fff', fontFamily: 'monospace' }).setOrigin(0.5);
       const hpT = this.add.text(bx, by + 4, `HP: ${cand.char.currentHp}/${cand.char.maxHp}`, { fontSize: '10px', fill: '#aaa', fontFamily: 'monospace' }).setOrigin(0.5);
 
       const stages = cand.char.stages;
@@ -1071,6 +1082,18 @@ class BattleScene extends Phaser.Scene {
         if (result.typeLabel) this.log.push(result.typeLabel);
 
         const defenderPlayer = effect.sourcePlayer === 1 ? 2 : 1;
+
+        // Fire onHit / onDealDamage ability hooks for delayed attacks
+        if (target.alive) {
+          this.fireAbilityHooks('onHit', { char: target, enemy: effect.casterSnap, player: defenderPlayer });
+        }
+        this.fireAbilityHooks('onDealDamage', { char: effect.casterSnap, enemy: target, player: effect.sourcePlayer });
+
+        // Check Healing Herb trigger
+        if (target.alive && target.currentHp > 0) {
+          this.fireItemOnHpBelow50(target, defenderPlayer);
+        }
+
         if (target.currentHp <= 0) {
           target.alive = false;
           this.log.push(`${target.name} is KO'd!`);
@@ -1306,50 +1329,68 @@ class BattleScene extends Phaser.Scene {
       return;
     }
 
-    if (!this.p1Active.alive) this.forceSwap(1);
-    if (!this.p2Active.alive) this.forceSwap(2);
+    // Handle KO swaps (may require player input), then continue
+    this.handleKOSwaps(() => {
+      // Fire turnEnd ability hooks for both active characters
+      if (this.p1Active.alive) {
+        this.fireAbilityHooks('turnEnd', { char: this.p1Active, enemy: this.p2Active, player: 1 });
+        this.fireItemTurnEnd(this.p1Active, 1);
+      }
+      if (this.p2Active.alive) {
+        this.fireAbilityHooks('turnEnd', { char: this.p2Active, enemy: this.p1Active, player: 2 });
+        this.fireItemTurnEnd(this.p2Active, 2);
+      }
 
-    // Fire turnEnd ability hooks for both active characters
-    if (this.p1Active.alive) {
-      this.fireAbilityHooks('turnEnd', { char: this.p1Active, enemy: this.p2Active, player: 1 });
-      this.fireItemTurnEnd(this.p1Active, 1);
+      // Tick pending multi-turn effects
+      this.tickPendingEffects();
+
+      // Tick cooldowns down
+      this.p1Actions.forEach(a => { if (a.cooldownLeft > 0) a.cooldownLeft--; });
+      this.p2Actions.forEach(a => { if (a.cooldownLeft > 0) a.cooldownLeft--; });
+
+      // Re-check for KOs caused by pending effects (e.g. delayed damage)
+      this.handleKOSwaps(() => {
+        // Check win condition again after pending effects
+        const p1StillAlive = this.p1Team.some(c => c.alive) && this.p1PlayerHp > 0;
+        const p2StillAlive = this.p2Team.some(c => c.alive) && this.p2PlayerHp > 0;
+        if (!p1StillAlive || !p2StillAlive) {
+          this.refreshUI();
+          const p1Lost2 = !this.p1Team.some(c => c.alive) || this.p1PlayerHp <= 0;
+          const p2Lost2 = !this.p2Team.some(c => c.alive) || this.p2PlayerHp <= 0;
+          let winner;
+          if (p1Lost2 && p2Lost2) winner = 'Draw';
+          else if (p2Lost2) winner = 'Player 1';
+          else winner = 'Player 2';
+          this.phase = 'gameover';
+          this.promptText.setText(`${winner} wins!\nClick to play again.`);
+          this.input.once('pointerdown', () => this.scene.start('BattlePrepScene'));
+          return;
+        }
+
+        this.refreshUI();
+        this.startNextRound();
+      });
+    });
+  }
+
+  // Chain forceSwap for both players, calling callback when done
+  handleKOSwaps(callback) {
+    const needP1 = !this.p1Active.alive && this.p1Team.some(c => c.alive);
+    const needP2 = !this.p2Active.alive && this.p2Team.some(c => c.alive);
+    if (needP1) {
+      this.forceSwap(1, () => {
+        this.refreshUI();
+        if (needP2) {
+          this.forceSwap(2, () => { this.refreshUI(); callback(); });
+        } else {
+          callback();
+        }
+      });
+    } else if (needP2) {
+      this.forceSwap(2, () => { this.refreshUI(); callback(); });
+    } else {
+      callback();
     }
-    if (this.p2Active.alive) {
-      this.fireAbilityHooks('turnEnd', { char: this.p2Active, enemy: this.p1Active, player: 2 });
-      this.fireItemTurnEnd(this.p2Active, 2);
-    }
-
-    // Tick pending multi-turn effects
-    this.tickPendingEffects();
-
-    // Tick cooldowns down
-    this.p1Actions.forEach(a => { if (a.cooldownLeft > 0) a.cooldownLeft--; });
-    this.p2Actions.forEach(a => { if (a.cooldownLeft > 0) a.cooldownLeft--; });
-
-    // Re-check for KOs caused by pending effects (e.g. delayed damage)
-    if (!this.p1Active.alive && this.p1Team.some(c => c.alive)) this.forceSwap(1);
-    if (!this.p2Active.alive && this.p2Team.some(c => c.alive)) this.forceSwap(2);
-
-    // Check win condition again after pending effects
-    const p1StillAlive = this.p1Team.some(c => c.alive) && this.p1PlayerHp > 0;
-    const p2StillAlive = this.p2Team.some(c => c.alive) && this.p2PlayerHp > 0;
-    if (!p1StillAlive || !p2StillAlive) {
-      this.refreshUI();
-      // Determine winner
-      const p1Lost2 = !this.p1Team.some(c => c.alive) || this.p1PlayerHp <= 0;
-      const p2Lost2 = !this.p2Team.some(c => c.alive) || this.p2PlayerHp <= 0;
-      let winner;
-      if (p1Lost2 && p2Lost2) winner = 'Draw';
-      else if (p2Lost2) winner = 'Player 1';
-      else winner = 'Player 2';
-      this.phase = 'gameover';
-      this.promptText.setText(`${winner} wins!\nClick to play again.`);
-      this.input.once('pointerdown', () => this.scene.start('BattlePrepScene'));
-      return;
-    }
-
-    this.refreshUI();
-    this.startNextRound();
   }
 
   startNextRound() {
@@ -1367,17 +1408,68 @@ class BattleScene extends Phaser.Scene {
     this.time.delayedCall(400, () => this.showPlayerActionMenu());
   }
 
-  forceSwap(player) {
+  forceSwap(player, callback) {
     const team = player === 1 ? this.p1Team : this.p2Team;
     const prop = player === 1 ? 'p1Index' : 'p2Index';
-    for (let i = 0; i < team.length; i++) {
-      if (team[i].alive) {
-        this[prop] = i;
+    const aliveCandidates = [];
+    team.forEach((c, i) => { if (c.alive) aliveCandidates.push({ char: c, index: i }); });
+
+    // Only one option — auto-pick
+    if (aliveCandidates.length <= 1) {
+      if (aliveCandidates.length === 1) {
+        this[prop] = aliveCandidates[0].index;
         const newChar = player === 1 ? this.p1Active : this.p2Active;
         const enemy = player === 1 ? this.p2Active : this.p1Active;
         this.fireAbilityHooks('onEntry', { char: newChar, enemy, player });
-        return;
       }
+      if (callback) callback();
+      return;
     }
+
+    // Multiple options — let the player choose
+    this.clearButtons();
+    const W = this.battleW;
+    const H = this.scale.height;
+    const color = player === 1 ? 0x0f3460 : 0x5c2a2a;
+
+    this.promptText.setText(`Player ${player} — Choose next character:`);
+
+    // Layout: 2 rows of 3 if needed
+    const cols = Math.min(aliveCandidates.length, 3);
+    const rows = Math.ceil(aliveCandidates.length / 3);
+    const btnW = 140;
+    const btnH = 50;
+    const gapX = 10;
+    const gapY = 10;
+    const totalW = cols * btnW + (cols - 1) * gapX;
+    const baseY = H * 0.78;
+
+    aliveCandidates.forEach((cand, i) => {
+      const row = Math.floor(i / 3);
+      const col = i % 3;
+      const colsInRow = row < rows - 1 ? 3 : ((aliveCandidates.length - 1) % 3) + 1;
+      const rowW = colsInRow * btnW + (colsInRow - 1) * gapX;
+      const bx = (W / 2) - (rowW / 2) + col * (btnW + gapX) + btnW / 2;
+      const by = baseY + row * (btnH + gapY);
+
+      const bg = this.add.rectangle(bx, by, btnW, btnH, color).setStrokeStyle(1, 0xffffff).setInteractive({ useHandCursor: true });
+      const nameT = this.add.text(bx, by - 10, cand.char.name, { fontSize: '12px', fill: '#fff', fontFamily: 'monospace' }).setOrigin(0.5);
+      const hpT = this.add.text(bx, by + 8, `HP: ${cand.char.currentHp}/${cand.char.maxHp}`, { fontSize: '10px', fill: '#aaa', fontFamily: 'monospace' }).setOrigin(0.5);
+
+      bg.on('pointerover', () => bg.setFillStyle(0xe94560));
+      bg.on('pointerout', () => bg.setFillStyle(color));
+      bg.on('pointerdown', () => {
+        this[prop] = cand.index;
+        const newChar = player === 1 ? this.p1Active : this.p2Active;
+        const enemy = player === 1 ? this.p2Active : this.p1Active;
+        this.log.push(`P${player} sends in ${newChar.name}!`);
+        this.fireAbilityHooks('onEntry', { char: newChar, enemy, player });
+        this.clearButtons();
+        this.refreshUI();
+        if (callback) callback();
+      });
+
+      this.buttons.push(bg, nameT, hpT);
+    });
   }
 }
