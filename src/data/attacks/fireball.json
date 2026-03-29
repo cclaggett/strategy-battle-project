@@ -2,7 +2,7 @@
   "id": "fireball",
   "name": "Fireball",
   "type": "magic",
-  "power": 55,
+  "power": 35,
   "description": "Fire-type magic. Spread — hits the enemy character AND deals 1 player HP damage.",
   "spread": true,
   "priority": 0,
