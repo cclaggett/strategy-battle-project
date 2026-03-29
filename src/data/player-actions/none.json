@@ -1,0 +1,7 @@
+{
+  "id": "none",
+  "name": "— Pass",
+  "description": "Do nothing",
+  "cooldown": 0,
+  "type": "pass"
+}
