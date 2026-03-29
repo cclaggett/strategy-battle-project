@@ -3,6 +3,7 @@
   "name": "Cleave",
   "type": "physical",
   "power": 50,
+  "spread": true,
   "description": "A wide sweeping strike. Solid mid-range damage with no drawbacks.",
   "priority": 0
 }
