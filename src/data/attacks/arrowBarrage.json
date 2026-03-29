@@ -7,4 +7,5 @@
   "stackable": true,
   "description": "Delayed 1 turn. Volley of arrows rains down — can stack multiple barrages!",
   "priority": 0,
+  "charges": 20
 }
