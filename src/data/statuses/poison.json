@@ -1,0 +1,8 @@
+{
+  "id": "poison",
+  "type": "poison",
+  "emoji": "☠️",
+  "effects": {
+    "dotDamage": 0.125
+  }
+}

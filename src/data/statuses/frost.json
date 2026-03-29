@@ -1,0 +1,9 @@
+{
+  "id": "frost",
+  "type": "ice",
+  "emoji": "❄️",
+  "effects": {
+    "speedMult": 0.5
+  },
+  "immuneTypes": ["ice"]
+}

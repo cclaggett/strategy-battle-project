@@ -1,0 +1,8 @@
+{
+  "id": "statusCure",
+  "name": "Status Cure",
+  "emoji": "💊",
+  "trigger": "turnEnd",
+  "consumable": true,
+  "effects": [{"type": "cureStatus"}]
+}

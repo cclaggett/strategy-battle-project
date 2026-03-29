@@ -1,0 +1,9 @@
+{
+  "id": "shock",
+  "type": "lightning",
+  "emoji": "⚡",
+  "effects": {
+    "chargeCostMult": 2
+  },
+  "immuneTypes": ["lightning"]
+}

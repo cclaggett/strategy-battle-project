@@ -11,6 +11,7 @@ let PLAYER_ACTIONS = {};
 let ABILITIES = {};
 let ITEMS = {};
 let SPECIALIZATIONS = {};
+let STATUSES = {};
 let TYPE_CHART = {};
 let TEAM_SIZE = 6;
 let ATTACK_SLOTS = 4;
@@ -56,13 +57,14 @@ async function loadGameData() {
   STAT_LABELS = cfg.statLabels;
 
   // Load all entities in parallel
-  const [attacks, characters, playerActions, abilities, items, specializations, typeChart] = await Promise.all([
+  const [attacks, characters, playerActions, abilities, items, specializations, statuses, typeChart] = await Promise.all([
     loadFolder('attacks'),
     loadFolder('characters'),
     loadFolder('player-actions'),
     loadFolder('abilities'),
     loadFolder('items'),
     loadFolder('specializations'),
+    loadFolder('statuses'),
     fetchJSON(`${DATA_ROOT}/types.json`),
   ]);
 

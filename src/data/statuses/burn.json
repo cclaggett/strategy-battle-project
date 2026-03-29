@@ -1,0 +1,10 @@
+{
+  "id": "burn",
+  "type": "fire",
+  "emoji": "🔥",
+  "effects": {
+    "dotDamage": 0.0625,
+    "physicalPowerMult": 0.5
+  },
+  "immuneTypes": ["fire"]
+}

@@ -1,0 +1,9 @@
+{
+  "id": "strongPoison",
+  "type": "poison",
+  "emoji": "💀",
+  "effects": {
+    "dotDamageBase": 0.0625,
+    "dotDamageInc": 0.0625
+  }
+}
