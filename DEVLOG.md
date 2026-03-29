@@ -1,5 +1,74 @@
 # Strategy Battle — Dev Log
 
+## 2026-03-29 — Session with Caleb Claggett & Gorm
+
+### Combat Pacing Overhaul
+- **Global damage scaler** — all damage × 0.6 (slows combat without inflating HP)
+- **KO no longer chips player HP** — two win conditions now fully independent (team wipe vs player HP depletion)
+
+### Simultaneous Resolution
+- Speed ties resolve simultaneously — both attacks deal damage based on pre-attack state
+- Stat effects, ability hooks, and KO checks apply after both hits land
+- Battle log shows "⚡ Speed tie — simultaneous resolution!"
+
+### Sudden Death
+- Triggers when both teams wipe and both players still have HP
+- Players pick from drafted player actions (+ Pass), repeat until someone's HP hits 0
+- Block resolves first (priority), all other actions simultaneous
+- Cooldowns reset for fairness
+
+### KO Character Selection
+- When a character is KO'd, player chooses their next active (no auto-pick)
+- Grid layout (3 per row) — fits 6-char teams without overflow
+- Auto-picks if only one alive
+
+### Delayed Attack Fix
+- `onHit` / `onDealDamage` ability hooks now fire on delayed attacks (Bulwark, Poison Blade, etc.)
+- Healing Herb also triggers on delayed damage
+
+### Non-Volatile Status Effects (new system)
+- Characters can have one status at a time — **no overwriting** (lesser status blocks worse ones strategically)
+- Statuses persist through switching (non-volatile)
+- Data-driven: `src/data/statuses/` with modular JSON files
+
+| Status | Emoji | Effect | Immune |
+|--------|-------|--------|--------|
+| Burn | 🔥 | 1/16 HP DOT + halves physical power | Fire types |
+| Frost | ❄️ | Halves speed | Ice types |
+| Shock | ⚡ | Doubles charge cost on moves | Lightning types |
+| Poison | ☠️ | 1/8 HP DOT | — |
+| Strong Poison | 💀 | 1/16 HP DOT, +1/16 per active turn (resets on switch) | — |
+
+### Charges System
+- Attacks have `"charges": N` field (default unlimited)
+- Per-character tracking (`attacksUsed`), UI shows remaining on buttons
+- Shock doubles charge consumption
+
+### Status Cure Items
+- Type ward items (Fire Ward, Ice Ward, etc.) cure matching status on trigger
+- New consumable: **Status Cure** 💊 — cures any status (turn end)
+
+### Balance Pass (Caleb)
+
+**Attack Changes:**
+- Fireball: power 55→35 (spread nerf)
+- Thunder: no longer spread (single-target)
+- Cleave: now spread (physical spread option)
+- Arcane Blast: 10 charges
+- Arrow Barrage: delay 1→2, removed ice type, 20 charges
+- Meteor Strike: delay 2→3
+
+**Player Action Changes:**
+- Block: CD 2→3
+- Heal: CD 2→5
+- Slash: power 20→40, offense 30→50
+- Blast: power 20→40, offense 30→50
+- Shot: power 10→20, offense 30→50, CD 2→4
+- Strike: removed from draft pool
+- Pass: removed from index (still hardcoded always available)
+
+**Design direction:** Spread nerfed across the board. Player actions hit harder but longer cooldowns. Direct character attacks significantly buffed to incentivize targeting opponents over relying on spread chip damage.
+
 ## 2026-03-16 — Session with Caleb Claggett
 
 ### Project Overview
