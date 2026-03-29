@@ -3,5 +3,7 @@
   "heal",
   "playerSlash",
   "playerBlast",
-  "playerShot"
+  "playerShot",
+  "strike",
+  "none"
 ]

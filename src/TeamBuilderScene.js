@@ -275,7 +275,7 @@ class TeamBuilderScene extends Phaser.Scene {
     this.subtitleText.setText(`Choose ${PLAYER_ACTION_SLOTS} player actions (${this.selectedPlayerActions.length}/${PLAYER_ACTION_SLOTS}). Pass is always available.`);
 
     // Get all selectable player actions (exclude 'none'/pass — it's always available)
-    const actionKeys = Object.keys(PLAYER_ACTIONS).filter(k => k !== 'none');
+    const actionKeys = Object.keys(PLAYER_ACTIONS).filter(k => k !== 'none' && k !== 'strike');
     const startY = 95;
 
     actionKeys.forEach((key, i) => {
