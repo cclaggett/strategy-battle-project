@@ -2,6 +2,6 @@
   "id": "block",
   "name": "🛡 Block",
   "description": "Block 1 player HP damage this turn",
-  "cooldown": 2,
+  "cooldown": 3,
   "type": "defensive"
 }
