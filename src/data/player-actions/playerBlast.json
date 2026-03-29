@@ -4,8 +4,8 @@
   "description": "Magic hit on enemy character",
   "cooldown": 2,
   "type": "charAttack",
-  "power": 20,
+  "power": 40,
   "offenseStat": "mAtk",
-  "offenseBase": 30,
+  "offenseBase": 50,
   "targeting": "character"
 }
