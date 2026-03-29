@@ -5,6 +5,6 @@
   "power": 65,
   "description": "Pure magical force. Long-range — can target the enemy character or deal 1 player HP directly.",
   "range": "long",
-  "priority": 0
+  "priority": 0,
   "charges": 10
 }
