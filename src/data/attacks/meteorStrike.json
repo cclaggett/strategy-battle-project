@@ -3,7 +3,7 @@
   "name": "Meteor Strike",
   "type": "magic",
   "power": 100,
-  "delay": 2,
+  "delay": 3,
   "stackable": false,
   "description": "Fire-type magic. Delayed 2 turns. Massive 100-power spread hit — damages enemy character AND 1 player HP. Cannot stack.",
   "priority": 0,
