@@ -74,6 +74,7 @@ async function loadGameData() {
   ABILITIES = abilities;
   ITEMS = items;
   SPECIALIZATIONS = specializations;
+  STATUSES = statuses;
   TYPE_CHART = typeChart;
 
   console.log(`Loaded ${Object.keys(ATTACKS).length} attacks, ${Object.keys(ROSTER).length} characters, ${Object.keys(PLAYER_ACTIONS).length} player actions, ${Object.keys(ABILITIES).length} abilities, ${Object.keys(ITEMS).length} items, ${Object.keys(SPECIALIZATIONS).length} specializations, ${Object.keys(TYPE_CHART.types).length} types`);

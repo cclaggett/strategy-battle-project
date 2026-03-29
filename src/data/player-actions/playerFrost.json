@@ -1,0 +1,8 @@
+{
+  "id": "playerFrost",
+  "name": "❄️ Chill",
+  "description": "Inflict Frost on opponent's active character",
+  "cooldown": 5,
+  "type": "status",
+  "inflictStatus": "frost"
+}

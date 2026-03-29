@@ -67,6 +67,7 @@ class BattleScene extends Phaser.Scene {
       }
     }
     char.stages = { atk: 0, def: 0, mAtk: 0, mDef: 0, spd: 0 };
+    char.status = null;  // non-volatile status (burn/frost/shock/poison/strongPoison)
     return char;
   }
 
@@ -458,6 +459,7 @@ class BattleScene extends Phaser.Scene {
         if (pa.type === 'defensive') bgColor = 0x1a3a1a;
         else if (pa.type === 'heal') bgColor = 0x1a2a3a;
         else if (pa.type === 'charAttack') bgColor = 0x3a1a1a;
+        else if (pa.type === 'status') bgColor = 0x3a2a1a;
       } else {
         bgColor = 0x222222;
       }
@@ -931,6 +933,21 @@ class BattleScene extends Phaser.Scene {
             this.log.push(`Player ${p} heals 1 player HP!`);
           } else {
             this.log.push(`Player ${p} tries to heal but is already at full!`);
+          }
+        } else if (pa.type === 'status' && pa.inflictStatus) {
+          const defender = p === 1 ? this.p2Active : this.p1Active;
+          if (defender && defender.alive) {
+            const statusDef = STATUSES[pa.inflictStatus];
+            if (!statusDef) {
+              this.log.push(`Player ${p} uses ${pa.name} — but status data missing!`);
+            } else if (defender.status) {
+              this.log.push(`Player ${p} uses ${pa.name} — but ${defender.name} is already afflicted!`);
+            } else if (statusDef.immuneTypes && defender.types && defender.types.some(t => statusDef.immuneTypes.includes(t))) {
+              this.log.push(`Player ${p} uses ${pa.name} — but ${defender.name} is immune!`);
+            } else {
+              defender.status = { id: pa.inflictStatus, turnsActive: 0 };
+              this.log.push(`Player ${p} uses ${pa.name} — ${defender.name} is now ${statusDef.emoji} ${pa.inflictStatus}!`);
+            }
           }
         } else if (pa.type === 'charAttack') {
           if (actionObj.targetPlayer) {

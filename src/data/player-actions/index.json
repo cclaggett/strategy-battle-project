@@ -4,5 +4,7 @@
   "playerSlash",
   "playerBlast",
   "playerShot",
+  "playerBurn",
+  "playerFrost",
   "none"
 ]
