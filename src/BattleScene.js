@@ -457,7 +457,7 @@ class BattleScene extends Phaser.Scene {
       if (!disabled) {
         if (pa.type === 'defensive') bgColor = 0x1a3a1a;
         else if (pa.type === 'heal') bgColor = 0x1a2a3a;
-        else if (pa.type === 'strike' || pa.type === 'charAttack') bgColor = 0x3a1a1a;
+        else if (pa.type === 'charAttack') bgColor = 0x3a1a1a;
       } else {
         bgColor = 0x222222;
       }
@@ -907,16 +907,6 @@ class BattleScene extends Phaser.Scene {
           } else {
             this.log.push(`Player ${p} tries to heal but is already at full!`);
           }
-        } else if (actionKey === 'strike') {
-          const blocked = targetP === 1 ? this.p1Blocking : this.p2Blocking;
-          const protectedByChar = targetP === 1 ? this.p1Protected : this.p2Protected;
-          if (blocked || protectedByChar) {
-            this.log.push(`Player ${p} strikes but Player ${targetP} ${blocked ? 'blocks' : "'s character protects them"}!`);
-          } else {
-            const prop = targetP === 1 ? 'p1PlayerHp' : 'p2PlayerHp';
-            this[prop] = Math.max(0, this[prop] - 1);
-            this.log.push(`Player ${p} strikes Player ${targetP} for 1 HP!`);
-          }
         } else if (actionKey === 'block') {
           this.log.push(`Player ${p} braces for impact!`);
         } else if (pa.type === 'charAttack') {
@@ -1357,7 +1347,7 @@ class BattleScene extends Phaser.Scene {
       if (!disabled) {
         if (pa.type === 'defensive') bgColor = 0x1a3a1a;
         else if (pa.type === 'heal') bgColor = 0x1a2a3a;
-        else if (pa.type === 'strike' || pa.type === 'charAttack') bgColor = 0x3a1a1a;
+        else if (pa.type === 'charAttack') bgColor = 0x3a1a1a;
       }
 
       const bg = this.add.rectangle(bx, by, spacing - 8, 48, bgColor).setStrokeStyle(1, disabled ? 0x444444 : 0xffffff);
@@ -1418,9 +1408,6 @@ class BattleScene extends Phaser.Scene {
           this[prop] = Math.min(MAX_PLAYER_HP, this[prop] + 1);
           this.log.push(`Player ${p} heals 1 player HP!`);
         }
-      } else if (pa.type === 'strike') {
-        const targetP = p === 1 ? 2 : 1;
-        this.dealPlayerDamage(targetP, 1, `Player ${p} strikes Player ${targetP}`);
       }
     });
 

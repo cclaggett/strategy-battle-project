@@ -1,7 +1,0 @@
-{
-  "id": "strike",
-  "name": "⚔ Strike",
-  "description": "Deal 1 player HP damage to opponent",
-  "cooldown": 1,
-  "type": "strike"
-}
