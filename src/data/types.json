@@ -28,7 +28,6 @@
     "dark": ["dark", "ice"]
   },
   "weakMultiplier": 2.0,
-  "critWeakMultiplier": 2.5,
   "critBonusMultiplier": 1.25,
   "resistMultiplier": 0.5
 }

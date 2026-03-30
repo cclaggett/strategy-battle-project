@@ -1,0 +1,7 @@
+{
+  "id": "critNegate",
+  "name": "Thick Skin",
+  "trigger": "onReceiveCrit",
+  "description": "Negates critical hit effects — removes crit bonus damage and stat-ignoring, but base damage still applies",
+  "effects": [{ "type": "negateCrit" }]
+}

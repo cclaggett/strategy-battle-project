@@ -94,16 +94,18 @@ function effectiveStat(char, stat) {
 }
 
 // Returns { multiplier, label, isCrit, isImmune } for an attack's damageType vs a defender's types
-function typeEffectiveness(atkDamageType, defenderTypes) {
+// isCrit flag comes from type-chart crit weaknesses OR the attack's forced crit flag.
+// Crit bonus (1.25x) is applied separately in calcDamageResult — critWeakness just uses
+// the normal weakness multiplier (2x) and sets the flag, so crit effective = 2x * 1.25x = 2.5x.
+function typeEffectiveness(atkDamageType, defenderTypes, forceCrit) {
   if (!atkDamageType || !defenderTypes || defenderTypes.length === 0) {
-    return { multiplier: 1, label: '', isCrit: false, isImmune: false };
+    return { multiplier: 1, label: '', isCrit: !!forceCrit, isImmune: false };
   }
   const weakMult = TYPE_CHART.weakMultiplier || 2;
-  const critWeakMult = TYPE_CHART.critWeakMultiplier || 2.5;
   const resMult = TYPE_CHART.resistMultiplier || 0.5;
 
   let multiplier = 1;
-  let isCrit = false;
+  let isCrit = !!forceCrit;
   let isImmune = false;
 
   for (const defType of defenderTypes) {
@@ -124,8 +126,9 @@ function typeEffectiveness(atkDamageType, defenderTypes) {
     const resistances = TYPE_CHART.resistances[defType] || [];
 
     if (critWeaknesses.includes(atkDamageType)) {
-      // Critically effective: use crit multiplier for this type and flag as crit
-      multiplier *= critWeakMult;
+      // Crit weakness: apply normal weakness multiplier + flag as crit
+      // The 1.25x crit bonus is applied in calcDamageResult
+      multiplier *= weakMult;
       isCrit = true;
     } else if (weaknesses.includes(atkDamageType)) {
       multiplier *= weakMult;
@@ -136,7 +139,7 @@ function typeEffectiveness(atkDamageType, defenderTypes) {
 
   let label = '';
   if (isCrit && multiplier > 1) label = 'Critically effective!!';
-  else if (isCrit) label = 'Critical hit!'; // crit flag active but multiplier reduced by dual-type resist
+  else if (isCrit) label = 'Critical hit!';
   else if (multiplier > 1) label = 'Super effective!';
   else if (multiplier < 1) label = 'Not very effective...';
   return { multiplier, label, isCrit, isImmune };
@@ -154,9 +157,9 @@ function calcDamageResult(attack, attacker, defender) {
     return { damage: 0, isCrit: false, isImmune: false, typeLabel: '' };
   }
 
-  // Check type effectiveness first
+  // Check type effectiveness first (pass atk.crit for forced-crit moves)
   const defTypes = defender.types || [];
-  const { multiplier, label: typeLabel, isCrit, isImmune } = typeEffectiveness(atk.damageType, defTypes);
+  const { multiplier, label: typeLabel, isCrit, isImmune } = typeEffectiveness(atk.damageType, defTypes, atk.crit);
 
   if (isImmune) {
     return { damage: 0, isCrit: false, isImmune: true, typeLabel };

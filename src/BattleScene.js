@@ -72,6 +72,36 @@ class BattleScene extends Phaser.Scene {
   }
 
   // ── Ability Hook System ─────────────────────────────────────────
+  // Checks if the defender has a crit-negate ability and recalculates damage without crit if so.
+  // Mutates result in place. Call after calcDamageResult and before applying damage.
+  applyCritNegate(result, atkKey, attacker, defender) {
+    if (!result.isCrit || !defender || !defender.ability) return;
+    const ability = ABILITIES[defender.ability];
+    if (!ability || ability.trigger !== 'onReceiveCrit') return;
+    // Check for negateCrit effect
+    const hasNegate = ability.effects.some(fx => fx.type === 'negateCrit');
+    if (!hasNegate) return;
+    // Recalculate damage without crit — use the normal (non-crit) path
+    result.isCrit = false;
+    const atk = ATTACKS[atkKey];
+    if (atk && atk.type !== 'heal' && atk.type !== 'status' && atk.type !== 'protect') {
+      const offStat = atk.type === 'physical' ? 'atk' : 'mAtk';
+      const defStat = atk.type === 'physical' ? 'def' : 'mDef';
+      const offense = effectiveStat(attacker, offStat);
+      const defense = effectiveStat(defender, defStat);
+      // Recalculate with type multiplier but no crit bonus
+      const defTypes = defender.types || [];
+      const { multiplier } = typeEffectiveness(atk.damageType, defTypes, false);
+      const baseDmg = atk.power * (offense / defense) * multiplier * DAMAGE_SCALER;
+      result.damage = Math.max(1, Math.round(baseDmg));
+    }
+    // Update label — still super effective if multiplier > 1
+    if (result.typeLabel && result.typeLabel.includes('Crit')) {
+      result.typeLabel = result.typeLabel.replace('Critically effective!!', 'Super effective!').replace('Critical hit!', '');
+    }
+    this.log.push(`${defender.name}'s ${ability.name} negates the crit!`);
+  }
+
   // Fires ability effects for a character if their ability matches the trigger.
   // context: { char, enemy, player } — the character with the ability, their opponent, and which player (1 or 2)
   fireAbilityHooks(trigger, context) {
@@ -1130,6 +1160,7 @@ class BattleScene extends Phaser.Scene {
           this.log.push(`☄️ ${atk.name} lands on ${target.name} — immune!`);
           return;
         }
+        this.applyCritNegate(result, effect.atkKey, effect.casterSnap, target);
         target.currentHp = Math.max(0, target.currentHp - result.damage);
         const critTag = result.isCrit ? ' 💥' : '';
         this.log.push(`☄️ ${atk.name} lands on ${target.name} for ${result.damage} dmg!${critTag}`);
@@ -1237,6 +1268,7 @@ class BattleScene extends Phaser.Scene {
       }
 
       const result = calcDamageResult(entry.choice.key, entry.attacker, entry.defender);
+      this.applyCritNegate(result, entry.choice.key, entry.attacker, entry.defender);
       const defenderPlayer = entry.player === 1 ? 2 : 1;
 
       // Apply item boosts
@@ -1500,6 +1532,7 @@ class BattleScene extends Phaser.Scene {
     }
 
     const result = calcDamageResult(atkKey, attacker, defender);
+    this.applyCritNegate(result, atkKey, attacker, defender);
     const defenderPlayer = attackerPlayer === 1 ? 2 : 1;
 
     // Apply item damage boost (passive items like War Belt / Spell Tome)
